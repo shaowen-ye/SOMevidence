@@ -1,0 +1,18 @@
+class,lifecycle,required_components,notes
+som_data,stable,layers|metadata|id_source,Training layers and observation metadata remain separate; identifier provenance is explicit.
+som_preprocess,stable,transform|center|scale|zero_replacement,Declarative preprocessing specification.
+som_resamples,stable,method|splits|seed|n,Explicit analysis and assessment indices.
+som_spec,stable,grids|seeds|rlen|alpha|radius|topology|neighbourhood|toroidal|mode|k|max_na_fraction|layer_weights|normalize_layers|cores,Prespecified ensemble design.
+som_ensemble,stable,data|spec|resamples|preprocess|fits|failures|warnings|expected_models|parallel,Retains full audit trail including failures and repeated warnings.
+som_audit,stable,fit_metrics|grid_summary|success_rate|failures|ensemble,Representation evidence kept separate from partitions.
+som_partitions,stable,records|pairwise|stability|method|scope|ensemble,Candidate hard-partition evidence with an explicit analysis or all-row scope.
+som_consensus,stable,k|method|scope|coassignment|tree|consensus_labels|aligned_labels|membership_support|assignment_entropy|assignment_count|assignment_coverage|replicated_assignment_coverage|clusterwise_jaccard|cluster_summary|metadata|records|ensemble,Sample-level support and uncertainty for one candidate k with explicit assignment counts and source provenance.
+som_cross_models,stable,records|failures|warnings|methods|k|ensemble,Controlled reference-model results and failure audit.
+som_cross_comparison,stable,comparisons|summary|failures|warnings|scope|ensemble,Cross-model agreement without ranking and with source provenance.
+som_workflow,stable,ensemble|audit|partitions|consensus|consensus_failures|cross_models|cross_comparison,Container preserving distinct evidence streams.
+som_gate,stable,max_topographic_error|max_empty_unit_rate|min_median_ari|min_median_ami|min_pairwise_coverage|min_cluster_jaccard|min_consensus_coverage|min_replicated_coverage|min_membership_support|max_assignment_entropy|min_cross_model_ari|min_cross_model_methods|min_success_rate,Analyst-specified gates with no universal defaults and explicit evidence-coverage options.
+som_defensibility,stable,status|k|evidence|checks,Conditional decision and reasons.
+som_external_assessment,stable,n_total|n_used|n_omitted|source|excluded_values|ari|ami|contingency|composition,Post hoc external-label agreement.
+som_transfer_audit,stable,metrics|failures|ensemble,Held-out-domain mapping diagnostics.
+som_newdata_mapping,stable,records|summary|failures|metadata|n_expected_fits,Fit-specific mapping records for new observations.
+som_sensitivity,experimental,representation|partition|cross_model|scenario_comparison|sample_comparison|sample_summary|failures|workflows,Scenario summaries plus global agreement and paired sample-level shared-universe and all-members sensitivity; list interface may evolve after usability testing.

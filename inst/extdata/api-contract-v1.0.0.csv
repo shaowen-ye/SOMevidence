@@ -1,0 +1,24 @@
+function,category,lifecycle,return_class,arguments,notes
+assess_defensibility,evidence_decision,stable,som_defensibility,audit|partitions|k|gate|consensus|cross_model,Evaluates analyst-specified gates without producing a composite score.
+audit_som,representation_evidence,stable,som_audit,ensemble,Summarises fit success and representation diagnostics across the ensemble.
+audit_transfer,transfer_evidence,stable,som_transfer_audit,ensemble,Describes held-out-domain mapping behaviour without claiming ecological transferability.
+compare_cross_models,cross_model_evidence,stable,som_cross_comparison,partitions|cross_models|scope,Reports agreement effect sizes and intervals rather than a model ranking.
+consensus_som,partition_evidence,stable,som_consensus,partitions|k|linkage|method|max_coassignment_n,Builds sample-level consensus for one prespecified candidate k.
+evaluate_external_labels,external_validation,stable,som_external_assessment,consensus|labels|exclude,Treats external labels as post hoc agreement evidence rather than training targets.
+expand_som_spec,model_design,stable,data.frame,spec,Expands the deterministic grid-by-seed design table.
+fit_cross_models,cross_model_evidence,stable,som_cross_models,ensemble|methods|k|kmeans_seeds|kmeans_nstart|kmeans_iter_max|gmm_model_names|keep_models|fail_fast,Fits controlled reference partitions on the same analysis splits.
+fit_som_ensemble,model_fitting,stable,som_ensemble,data|spec|resamples|preprocess|keep_models|fail_fast|parallel,Fits split-specific preprocessing and SOM members with explicit failures and warnings.
+launch_som_app,interactive_interface,experimental,interactive_side_effect,,Optional Shiny interface whose exported R script is the reproducible record; the launch side effect is not invoked by automated contract tests.
+map_som_ensemble,transfer_evidence,stable,som_newdata_mapping,ensemble|new_data|fail_fast,Maps compatible new observations through retained fitted ensemble members.
+open_data_registry,data_governance,stable,data.frame,role|domain,Returns governed metadata and provenance for external demonstration datasets.
+pareto_candidates,evidence_selection,stable,data.frame,x|metrics,Identifies non-dominated candidates without collapsing evidence into one score.
+partition_som,partition_evidence,stable,som_partitions,ensemble|k|method|scope,Creates candidate hard partitions and defaults to analysis-only stability evidence.
+plot_som_plane,visualisation,stable,ggplot,x|type|fit_id|layer|variables,Returns an editable component-plane or distance plot.
+run_som_sensitivity,workflow,experimental,som_sensitivity,scenarios|cross_models|cross_model_control|consensus_method|max_coassignment_n|sample_profiles|keep_workflows|fail_fast,Scenario-list interface may evolve after external usability testing.
+run_som_workflow,workflow,stable,som_workflow,data|spec|resamples|preprocess|k|cross_models|cross_model_control|consensus_method|max_coassignment_n|keep_models|fail_fast|parallel,Orchestrates evidence streams without selecting a winning k or method.
+simulate_som_scenario,validation_data,experimental,som_data,scenario|n|p|seed|noise_sd|class_probs|n_groups|group_icc|n_domains|domain_shift|missing_rate|missing_mechanism|id,Research and teaching utility whose scenario catalogue may expand.
+som_data,data_contract,stable,som_data,x|layers|id|group|time|domain|weight|external_label,Separates training layers from sampling-design and external-label metadata.
+som_gate,evidence_decision,stable,som_gate,max_topographic_error|max_empty_unit_rate|min_median_ari|min_median_ami|min_pairwise_coverage|min_cluster_jaccard|min_consensus_coverage|min_replicated_coverage|min_membership_support|max_assignment_entropy|min_cross_model_ari|min_cross_model_methods|min_success_rate,Stores explicit analyst-specified decision thresholds; none are universal defaults.
+som_preprocess,preprocessing,stable,som_preprocess,transform|center|scale|zero_replacement,Defines transformations that are estimated within each analysis split.
+som_resamples,sampling_design,stable,som_resamples,data|method|repeats|prop|seed|unit|domain|splits,Requires explicit sampling units or blocks and never infers dependence from row order.
+som_spec,model_design,stable,som_spec,grids|seeds|rlen|alpha|radius|topology|neighbourhood|toroidal|mode|k|max_na_fraction|layer_weights|normalize_layers|cores,Defines the prespecified SOM ensemble design and computational budget.

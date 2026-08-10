@@ -1,0 +1,7 @@
+^\.git$
+^\.github$
+^.*\.Rproj$
+^\.Rproj\.user$
+^_pkgdown\.yml$
+^SOMevidence_.*\.tar\.gz$
+^.*\.Rcheck$

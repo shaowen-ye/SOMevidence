@@ -1,0 +1,13 @@
+citHeader("To cite SOMevidence in publications, use:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "SOMevidence: Evidence Workflows for Self-Organizing Map Classification",
+  author = person("Shaowen", "Ye"),
+  year = "2026",
+  note = sprintf("R package version %s", meta$Version),
+  textVersion = paste0(
+    "Ye, S. (2026). SOMevidence: Evidence Workflows for Self-Organizing Map ",
+    "Classification. R package version ", meta$Version, "."
+  )
+)

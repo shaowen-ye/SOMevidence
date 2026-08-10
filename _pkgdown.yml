@@ -1,0 +1,61 @@
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, articles, reference]
+    right: [search]
+
+articles:
+  - title: Core workflow
+    contents:
+      - getting-started
+      - api-lifecycle
+      - design-aware-resampling
+      - visualizing-evidence
+
+reference:
+  - title: Data, preprocessing and design
+    contents:
+      - som_data
+      - som_preprocess
+      - som_resamples
+      - som_spec
+      - expand_som_spec
+  - title: Ensembles and representation
+    contents:
+      - fit_som_ensemble
+      - audit_som
+      - plot_som_plane
+      - pareto_candidates
+  - title: Partitions and consensus
+    contents:
+      - partition_som
+      - consensus_som
+      - som_gate
+      - assess_defensibility
+  - title: Triangulation and transfer
+    contents:
+      - fit_cross_models
+      - compare_cross_models
+      - audit_transfer
+      - map_som_ensemble
+      - evaluate_external_labels
+  - title: Diagnostic plot methods
+    contents:
+      - plot.som_audit
+      - plot.som_partitions
+      - plot.som_consensus
+      - plot.som_cross_comparison
+      - plot.som_transfer_audit
+      - plot.som_newdata_mapping
+      - plot.som_sensitivity
+  - title: Complete workflows
+    contents:
+      - run_som_workflow
+      - run_som_sensitivity
+  - title: Teaching, examples and interface
+    contents:
+      - simulate_som_scenario
+      - open_data_registry
+      - launch_som_app

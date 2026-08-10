@@ -1,0 +1,84 @@
+---
+title: "API lifecycle and reproducibility contracts"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{API lifecycle and reproducibility contracts}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Why the package has contracts
+
+`SOMevidence` treats software interfaces as part of reproducibility. A change to
+an argument name or a returned evidence table can invalidate an analysis even
+when the numerical algorithm is unchanged. The package therefore ships two
+machine-readable versioned contracts:
+
+```{r contracts}
+api_path <- system.file(
+  "extdata", "api-contract-v1.0.0.csv", package = "SOMevidence"
+)
+object_path <- system.file(
+  "extdata", "object-contract-v1.0.0.csv", package = "SOMevidence"
+)
+api_contract <- utils::read.csv(api_path, check.names = FALSE)
+object_contract <- utils::read.csv(object_path, check.names = FALSE)
+
+table(api_contract$lifecycle)
+head(object_contract[c("class", "lifecycle")])
+```
+
+Automated tests compare these files with the namespace, function formals and
+returned object structures. The 1.0.0 contracts define the first public API
+compatibility promise.
+
+## Stable and experimental interfaces
+
+Stable functions cover the data contract, preprocessing, sampling design,
+ensemble fitting, evidence audits, transfer and conditional decision gates.
+Breaking changes require a new major package version.
+
+Three interfaces remain experimental:
+
+```{r experimental}
+api_contract[api_contract$lifecycle == "experimental",
+             c("function", "notes")]
+```
+
+The optional GUI exports ordinary R code and a YAML configuration. The R code,
+not the interactive session, is the reproducible record. The sensitivity and
+simulation interfaces remain experimental because external users may expose
+better ways to describe scenarios.
+
+## Object boundaries are scientific boundaries
+
+The returned classes keep distinct questions apart:
+
+- `som_audit` concerns representation quality;
+- `som_partitions` and `som_consensus` concern analysis-scope hard-partition
+  stability; held-out mappings belong to transfer evidence;
+- `som_cross_comparison` concerns algorithmic agreement;
+- `som_transfer_audit` concerns held-domain behaviour; and
+- `som_defensibility` records an analyst-specified conditional decision.
+
+No object is a certificate of ecological truth. External labels are held out
+from training, cross-model agreement is not a leaderboard and insufficient
+evidence may lead to abstention.
+
+## Reporting an analysis
+
+Archive the package version, session information, analysis script, sampling
+design and gate settings with every analysis:
+
+```{r report-version}
+packageVersion("SOMevidence")
+sessionInfo()
+```
+
+For work intended to support a publication, also retain the exact data
+provenance, random seeds, model failures, warnings and the API contract
+version used by the analysis.
