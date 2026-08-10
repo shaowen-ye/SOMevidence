@@ -1,3 +1,8 @@
+# SOMevidence 1.0.1
+
+- Updated the package maintainer email address. No API or analytical behaviour
+  changed in this patch release.
+
 # SOMevidence 1.0.0
 
 ## Data design and preprocessing

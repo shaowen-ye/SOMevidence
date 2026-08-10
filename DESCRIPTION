@@ -1,8 +1,8 @@
 Package: SOMevidence
 Title: Evidence Workflows for Self-Organizing Map Classification
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: person("Shaowen", "Ye", role = c("aut", "cre"),
-                  email = "76806529+shaowen-ye@users.noreply.github.com")
+                  email = "yeshaowen2119@gmail.com")
 Description: Provides explicit data-design objects, leakage-safe preprocessing,
     design-aware resampling, reproducible ensembles of self-organizing maps,
     and evidence-oriented diagnostics for ecological, environmental and

@@ -36,11 +36,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Shaowen Ye \email{76806529+shaowen-ye@users.noreply.github.com}
+\strong{Maintainer}: Shaowen Ye \email{yeshaowen2119@gmail.com}
 
 Authors:
 \itemize{
-  \item Shaowen Ye \email{76806529+shaowen-ye@users.noreply.github.com}
+  \item Shaowen Ye \email{yeshaowen2119@gmail.com}
 }
 
 }
