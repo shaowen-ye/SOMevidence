@@ -53,9 +53,11 @@ test_that("label alignment never invents unsupported correspondences", {
     )
   )
   propagated <- SOMevidence:::.propagate_alignment(records, 1L, 2L)
-  expect_true(all(
-    propagated$alignment_diagnostics$n_resolved_clusters == 2L
-  ))
+  expect_identical(nrow(propagated$diagnostics), 2L)
+  expect_identical(
+    propagated$diagnostics$n_resolved_clusters,
+    c(2L, 2L)
+  )
 })
 
 test_that("Ward training labels remain the Ward.D2 cutree partition", {
