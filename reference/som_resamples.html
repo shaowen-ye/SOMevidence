@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,7 +94,9 @@ optional <code>assessment</code> row indices.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>som_resamples</code> object.</p>
+    <p>A <code>som_resamples</code> object. The object records the number of distinct
+analysis sets in <code>n_unique_analysis_splits</code> and identifies repeated sets
+in <code>duplicate_analysis_splits</code>.</p>
     </div>
 
     <div class="section level2">
@@ -105,6 +107,7 @@ optional <code>assessment</code> row indices.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;som_resamples&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   method    : group_subsample </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   splits    : 2 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   unique analysis sets: 2 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   analysis  : 24-24 rows</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   assessment: 6-6 rows</span>
 </code></pre></div>

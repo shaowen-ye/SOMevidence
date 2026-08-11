@@ -81,6 +81,7 @@ year_splits
 #> <som_resamples>
 #>   method    : leave_domain_out 
 #>   splits    : 3 
+#>   unique analysis sets: 3 
 #>   analysis  : 223-233 rows
 #>   assessment: 109-119 rows
 expand_som_spec(spec)
@@ -307,7 +308,7 @@ exact analysis choices with any reported result.
 ``` r
 
 packageVersion("SOMevidence")
-#> [1] '1.1.1'
+#> [1] '1.1.2'
 packageVersion("palmerpenguins")
 #> [1] '0.1.1'
 sessionInfo()
@@ -332,7 +333,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] SOMevidence_1.1.1
+#> [1] SOMevidence_1.1.2
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6         jsonlite_2.0.0       kohonen_3.0.13      

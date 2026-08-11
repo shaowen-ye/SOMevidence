@@ -3,8 +3,8 @@
 `SOMevidence` wraps the training implementation in
 [`kohonen::supersom()`](https://rdrr.io/pkg/kohonen/man/supersom.html)
 with explicit data-design, preprocessing, resampling, ensemble and
-evidence-auditing interfaces. Its central distinction is between a
-reproducible continuous representation and a defensible hard partition.
+evidence-auditing interfaces. Its central distinction is between
+continuous-representation diagnostics and a defensible hard partition.
 
 ## API contract
 

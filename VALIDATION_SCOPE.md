@@ -21,11 +21,20 @@ ecological truth.
 
 [`assess_defensibility()`](https://shaowen-ye.github.io/SOMevidence/reference/assess_defensibility.md)
 returns `supported` only when every active gate and the required
-structural-completeness checks pass. The status means that a candidate
-partition met the analyst’s prespecified evidence requirements for that
-workflow. It does not demonstrate that discrete ecological types exist,
-choose an optimal `k`, name the resulting groups, identify a causal
-mechanism, or establish general transferability.
+structural-completeness checks pass, the evidence objects trace to the
+same candidate partitions, comparative partition evidence is evaluable,
+and at least one partition-quality requirement was prespecified. The
+status means that a candidate partition met the analyst’s prespecified
+evidence requirements for that workflow. It does not demonstrate that
+discrete ecological types exist, choose an optimal `k`, name the
+resulting groups, identify a causal mechanism, or establish general
+transferability.
+
+A representation audit by itself is not candidate-partition evidence. If
+no partition, consensus or cross-model partition evidence is supplied,
+comparative evidence cannot be evaluated, or the gate contains only
+representation-level requirements, the required evidence is marked
+unavailable and the decision is `uncertain`.
 
 The package supplies no universal gate thresholds. Requirements should
 be defined before inspecting the focal result and justified from the

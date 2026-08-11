@@ -115,6 +115,5 @@ plot(workflow$cross_comparison)
 ![](visualizing-evidence_files/figure-html/cross-model-1.png)
 
 Together these views separate three questions: what one map looks like,
-whether the multivariate representation is reproducible and whether a
-hard partition is defensible. They should not be replaced by a single
-composite score.
+what the representation diagnostics show, and whether a hard partition
+is defensible. They should not be replaced by a single composite score.

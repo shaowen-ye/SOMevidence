@@ -174,25 +174,29 @@ establish ecological truth.
 
 Pareto selection retains candidates that are not dominated across the
 stated criteria. It does not collapse the evidence into a weighted score
-or a model leaderboard.
+or a model leaderboard. Because the fitted ensemble uses distinct
+resamples, fit-level metrics are not compared directly. Configuration
+summaries must cover the same successful resamples and random starts.
+All planned fits succeeded in this worked example before the grid-level
+medians are compared.
 
 ``` r
 
-pareto_candidates(audit)
-#>                           id      split_id grid_id xdim ydim seed
-#> 1 subsample_001__g02_4x3_s31 subsample_001       2    4    3   31
-#> 2 subsample_002__g02_4x3_s30 subsample_002       2    4    3   30
-#> 3 subsample_002__g02_4x3_s31 subsample_002       2    4    3   31
-#> 4 subsample_003__g01_3x2_s30 subsample_003       1    3    2   30
-#> 5 subsample_003__g01_3x2_s31 subsample_003       1    3    2   31
-#> 6 subsample_003__g02_4x3_s30 subsample_003       2    4    3   30
-#>   quantization_error topographic_error empty_unit_rate pareto
-#> 1           2.268676         0.2638889               0   TRUE
-#> 2           2.236862         0.2916667               0   TRUE
-#> 3           2.345579         0.2222222               0   TRUE
-#> 4           3.455672         0.1250000               0   TRUE
-#> 5           3.231768         0.1527778               0   TRUE
-#> 6           2.133876         0.5555556               0   TRUE
+stopifnot(audit$success_rate == 1)
+pareto_candidates(
+  audit$grid_summary,
+  metrics = c(
+    median_quantization_error = "min",
+    median_topographic_error = "min",
+    median_empty_unit_rate = "min"
+  )
+)
+#>    grid xdim ydim n_fits median_quantization_error median_topographic_error
+#> 1 3 x 2    3    2      6                  3.344689                0.2222222
+#> 2 4 x 3    4    3      6                  2.257257                0.2916667
+#>   median_empty_unit_rate pareto
+#> 1                      0   TRUE
+#> 2                      0   TRUE
 ```
 
 ## A conclusion may be withheld
@@ -234,6 +238,8 @@ assess_defensibility(
 #>   k     : 3 
 #>   - all_cross_model_fits_succeeded: observed=1, threshold=1, pass
 #>   - consensus_observes_k: observed=3, threshold=3, pass
+#>   - comparative_partition_evidence_available: observed=1, threshold=1, pass
+#>   - partition_quality_requirement_specified: observed=1, threshold=1, pass
 #>   - all_partitions_observe_k: observed=1, threshold=1, pass
 #>   - max_topographic_error: observed=0.264, threshold=0.5, pass
 #>   - max_empty_unit_rate: observed=0, threshold=0.5, pass

@@ -57,7 +57,9 @@ som_resamples(
 
 ## Value
 
-A `som_resamples` object.
+A `som_resamples` object. The object records the number of distinct
+analysis sets in `n_unique_analysis_splits` and identifies repeated sets
+in `duplicate_analysis_splits`.
 
 ## Examples
 
@@ -68,6 +70,7 @@ som_resamples(data, method = "group_subsample", repeats = 2, seed = 1)
 #> <som_resamples>
 #>   method    : group_subsample 
 #>   splits    : 2 
+#>   unique analysis sets: 2 
 #>   analysis  : 24-24 rows
 #>   assessment: 6-6 rows
 ```

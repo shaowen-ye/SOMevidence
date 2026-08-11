@@ -180,7 +180,7 @@ sampling design, and gate settings with every analysis:
 ``` r
 
 packageVersion("SOMevidence")
-#> [1] '1.1.1'
+#> [1] '1.1.2'
 sessionInfo()
 #> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu

@@ -26,7 +26,8 @@ assess_defensibility(
 
 - partitions:
 
-  Optional `som_partitions` object.
+  Optional `som_partitions` object. At least one partition- derived
+  evidence object is required for a `"supported"` decision.
 
 - k:
 
@@ -56,3 +57,9 @@ requirements and structural completeness checks were met for the stated
 data, analysis design, preprocessing, model budget and candidate `k`. It
 does not demonstrate that discrete ecological types exist, identify a
 causal mechanism, or establish ecological truth.
+
+A representation audit alone cannot support a hard partition. A
+supported decision also requires traceable comparative partition
+evidence and at least one prespecified partition-quality requirement.
+Missing evidence or a representation-only gate produces an `"uncertain"`
+result.

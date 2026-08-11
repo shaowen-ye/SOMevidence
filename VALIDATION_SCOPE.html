@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,7 +63,8 @@
 </tr></tbody></table></div>
 <div class="section level2">
 <h2 id="meaning-of-a-supported-decision">Meaning of a supported decision<a class="anchor" aria-label="anchor" href="#meaning-of-a-supported-decision"></a></h2>
-<p><code><a href="reference/assess_defensibility.html">assess_defensibility()</a></code> returns <code>supported</code> only when every active gate and the required structural-completeness checks pass. The status means that a candidate partition met the analyst’s prespecified evidence requirements for that workflow. It does not demonstrate that discrete ecological types exist, choose an optimal <code>k</code>, name the resulting groups, identify a causal mechanism, or establish general transferability.</p>
+<p><code><a href="reference/assess_defensibility.html">assess_defensibility()</a></code> returns <code>supported</code> only when every active gate and the required structural-completeness checks pass, the evidence objects trace to the same candidate partitions, comparative partition evidence is evaluable, and at least one partition-quality requirement was prespecified. The status means that a candidate partition met the analyst’s prespecified evidence requirements for that workflow. It does not demonstrate that discrete ecological types exist, choose an optimal <code>k</code>, name the resulting groups, identify a causal mechanism, or establish general transferability.</p>
+<p>A representation audit by itself is not candidate-partition evidence. If no partition, consensus or cross-model partition evidence is supplied, comparative evidence cannot be evaluated, or the gate contains only representation-level requirements, the required evidence is marked unavailable and the decision is <code>uncertain</code>.</p>
 <p>The package supplies no universal gate thresholds. Requirements should be defined before inspecting the focal result and justified from the study design, decision context, simulation evidence or an independently governed protocol. Changing the data, sampling unit, preprocessing, candidate values, ensemble budget or transfer domain changes the scope of the decision.</p>
 </div>
 <div class="section level2">

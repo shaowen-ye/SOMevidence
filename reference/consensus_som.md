@@ -50,9 +50,10 @@ A `som_consensus` object containing aligned assignments,
 partition-assignment, consensus-label and replicated coverage,
 membership support, assignment entropy and clusterwise Jaccard values.
 The object also records whether the consensus itself retains all
-requested clusters. For co-assignment consensus, `coassignment` and
-`tree` contain the dense matrix and its hierarchical clustering; both
-are `NULL` for aligned voting. Aligned voting avoids quadratic growth in
+requested clusters and retains the originating partition method as
+provenance. For co-assignment consensus, `coassignment` and `tree`
+contain the dense matrix and its hierarchical clustering; both are
+`NULL` for aligned voting. Aligned voting avoids quadratic growth in
 sample count, but alignment and upstream partition auditing can still
 grow quadratically in the number of ensemble members.
 

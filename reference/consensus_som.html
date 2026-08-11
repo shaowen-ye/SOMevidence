@@ -13,7 +13,7 @@ different grids into a common node geometry."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,10 +93,10 @@ quadratically with sample count.</p></dd>
 partition-assignment, consensus-label and replicated
 coverage, membership support, assignment entropy and clusterwise Jaccard
 values. The object also records whether the consensus itself retains all
-requested clusters. For co-assignment consensus, <code>coassignment</code> and <code>tree</code>
-contain the dense matrix and its hierarchical clustering; both are <code>NULL</code>
-for aligned voting. Aligned voting avoids quadratic growth in sample
-count, but
+requested clusters and retains the originating partition method as
+provenance. For co-assignment consensus, <code>coassignment</code> and <code>tree</code> contain
+the dense matrix and its hierarchical clustering; both are <code>NULL</code> for
+aligned voting. Aligned voting avoids quadratic growth in sample count, but
 alignment and upstream partition auditing can still grow quadratically in
 the number of ensemble members.</p>
     </div>

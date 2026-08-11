@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,21 @@
       <small>Source: <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.1.2" id="somevidence-112">SOMevidence 1.1.2<a class="anchor" aria-label="anchor" href="#somevidence-112"></a></h2>
+<div class="section level3">
+<h3 id="scientific-decision-guards-1-1-2">Scientific decision guards<a class="anchor" aria-label="anchor" href="#scientific-decision-guards-1-1-2"></a></h3>
+<ul><li>Prevents representation-only evidence gates from returning <code>supported</code> for a hard partition. A supported decision now requires traceable comparative partition evidence and at least one prespecified partition-quality rule; unavailable evidence produces an <code>uncertain</code> decision.</li>
+<li>Verifies from explicit partition-method provenance and candidate records that partitions, consensus and cross-model comparisons supplied to one decision derive from the same partitioning pipeline.</li>
+<li>Prevents fit-level Pareto selection from silently comparing fits trained on distinct analysis rows. For compatibility, the established audit interface returns an explicitly warned and annotated exploratory frontier; scientific selection should use comparable configuration summaries instead.</li>
+<li>Blocks the experimental GUI before fitting when selected predictors contain missing values, because the 1.1.x interface does not expose a missing- distance policy.</li>
+<li>Checks preprocessing and layer-weight prerequisites within every GUI analysis split, and blocks a requested cross-model analysis when no split is eligible.</li>
+<li>Records and warns about repeated analysis sets in resampling objects; the GUI blocks designs that would overweight duplicate data perturbations.</li>
+<li>Describes the current representation layer as diagnostics rather than claiming cross-fit reproducibility metrics that are not yet implemented.</li>
+<li>Makes CI success conditional on a complete <code>R CMD check</code> log, disables the network-dependent remote incoming query in the routine matrix, and adds PDF- manual and manually triggered remote CRAN preflight checks.</li>
+<li>Pins third-party GitHub Actions to immutable commits and adds explicit job timeouts.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.1.1" id="somevidence-111">SOMevidence 1.1.1<a class="anchor" aria-label="anchor" href="#somevidence-111"></a></h2>
 <div class="section level3">

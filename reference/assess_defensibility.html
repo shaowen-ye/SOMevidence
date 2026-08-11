@@ -13,7 +13,7 @@ uncertain result rather than being treated as a pass."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,7 +68,8 @@ uncertain result rather than being treated as a pass.</p>
 
 
 <dt id="arg-partitions">partitions<a class="anchor" aria-label="anchor" href="#arg-partitions"></a></dt>
-<dd><p>Optional <code>som_partitions</code> object.</p></dd>
+<dd><p>Optional <code>som_partitions</code> object. At least one partition-
+derived evidence object is required for a <code>"supported"</code> decision.</p></dd>
 
 
 <dt id="arg-k">k<a class="anchor" aria-label="anchor" href="#arg-k"></a></dt>
@@ -99,6 +100,10 @@ requirements and structural completeness checks were met for the stated
 data, analysis design, preprocessing, model budget and candidate <code>k</code>. It does
 not demonstrate that discrete ecological types exist, identify a causal
 mechanism, or establish ecological truth.</p>
+<p>A representation audit alone cannot support a hard partition. A supported
+decision also requires traceable comparative partition evidence and at
+least one prespecified partition-quality requirement. Missing evidence or a
+representation-only gate produces an <code>"uncertain"</code> result.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

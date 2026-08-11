@@ -32,8 +32,9 @@ compare_cross_models(
 ## Value
 
 A `som_cross_comparison` containing ARI and AMI effect sizes, summaries,
-reference-fit success rates and source-partition completeness. Neither
-agreement metric is reported as accuracy.
+reference-fit success rates, source-partition completeness and
+source-partition provenance. Neither agreement metric is reported as
+accuracy.
 
 ## Examples
 
