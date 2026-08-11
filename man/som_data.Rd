@@ -21,7 +21,11 @@ som_data(
 \item{layers}{A named list of numeric matrices or data frames. Use either
 \code{x} or \code{layers}, not both.}
 
-\item{id}{Optional unique sample identifiers.}
+\item{id}{Optional unique sample identifiers. Supplying \code{id} explicitly is
+recommended for scientific analyses. If it is omitted, informative row
+names are used unless every row name follows the package-like
+\verb{sample_<integer>} or \verb{simulation_<integer>} pattern; such fully generic
+sequences are treated as generated rather than independently stable.}
 
 \item{group}{Optional sampling-group identifiers.}
 
@@ -47,7 +51,9 @@ changes its row order. If no layers have usable row names, their existing
 row order is treated as authoritative. The scalar \code{id_source} records
 whether sample identifiers were supplied, taken from explicit
 non-positional row names or generated locally. Stable identifiers are
-required to compare different data-coverage scenarios.
+required to compare different data-coverage scenarios. A mixture of
+generic and study-specific row names is retained as explicit identity;
+one generic name does not cause the remaining row names to be discarded.
 }
 \description{
 Construct a design-explicit SOM data object

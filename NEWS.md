@@ -2,6 +2,9 @@
 
 ## Documentation and release evidence
 
+- Preserves explicit row identity when only some row names resemble generated
+  `sample_<integer>` identifiers; only fully generic sequences are now treated
+  as generated when `id` is omitted.
 - Replaces a stale GUI version reference with a version-neutral statement of
   the current configuration-import boundary.
 - Clarifies the conditional scope of the grouped-simulation correlation,
