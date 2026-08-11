@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,6 +72,7 @@
 <li>leakage-safe preprocessing fitted separately within each analysis split;</li>
 <li>row-, group-, block-, and domain-aware resampling designs;</li>
 <li>reproducible ensembles across map grids, random seeds, and resamples;</li>
+<li>exact cross-fit audits of continuous SOM topology under explicit computation budgets;</li>
 <li>quantization, topology, occupancy, consensus, entropy, Jaccard, ARI, and AMI diagnostics;</li>
 <li>controlled triangulation with K-means, Ward.D2, and, when requested, Gaussian mixture models;</li>
 <li>held-domain and later-batch mapping without refitting preprocessing on the assessment data;</li>
@@ -105,6 +106,13 @@
 <td>Generally lower within comparable fits; inspect trade-offs</td>
 <td>Successful fits using the same variables, preprocessing, scope, and comparable grids</td>
 <td>A best map, a true number of classes, or ecological validity</td>
+</tr>
+<tr>
+<td>Is the continuous SOM topology reproducible across fitted maps?</td>
+<td>Rank correlation of shortest-hop sample-pair distances; optional tie-preserving neighbourhood Jaccard</td>
+<td>Higher concordance under the prespecified fit-pair design; inspect coverage and unevaluable cases</td>
+<td>Common sample IDs, comparable scopes, successful mappings, and an explicit exact-computation budget</td>
+<td>Interchangeable codebooks, a best map, discrete classes, or independent inferential replication</td>
 </tr>
 <tr>
 <td>Is a fixed-<code>k</code> partition reproducible across the planned ensemble?</td>
@@ -211,8 +219,23 @@
 <span><span class="va">result</span><span class="op">$</span><span class="va">consensus</span><span class="op">$</span><span class="va">k3</span><span class="op">$</span><span class="va">cluster_summary</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">cross_comparison</span><span class="op">$</span><span class="va">summary</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">consensus_failures</span></span></code></pre></div>
-<p>The workflow reports every requested candidate <code>k</code>; it does not silently pick one. Gaussian mixture-model comparison is available when the suggested package <code>mclust</code> is installed and <code>"gmm"</code> is requested explicitly.</p>
+<span><span class="va">result</span><span class="op">$</span><span class="va">consensus_failures</span></span>
+<span></span>
+<span><span class="co"># Compare one prespecified pair of successful SOM representations.</span></span>
+<span><span class="va">successful_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Filter</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">fit</span><span class="op">$</span><span class="va">success</span><span class="op">)</span>, <span class="va">result</span><span class="op">$</span><span class="va">ensemble</span><span class="op">$</span><span class="va">fits</span><span class="op">)</span>,</span>
+<span>  <span class="va">`[[`</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="st">"id"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">representation</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/audit_som_representation.html">audit_som_representation</a></span><span class="op">(</span></span>
+<span>  <span class="va">result</span><span class="op">$</span><span class="va">ensemble</span>,</span>
+<span>  pairs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    fit_a <span class="op">=</span> <span class="va">successful_ids</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>    fit_b <span class="op">=</span> <span class="va">successful_ids</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  neighbourhood_size <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">representation</span><span class="op">$</span><span class="va">pairwise</span></span></code></pre></div>
+<p>The workflow reports every requested candidate <code>k</code>; it does not silently pick one. Gaussian mixture-model comparison is available when the suggested package <code>mclust</code> is installed and <code>"gmm"</code> is requested explicitly. <code><a href="reference/audit_som_representation.html">audit_som_representation()</a></code> is experimental and descriptive: it does not score, rank or select maps, and its fit pairs and sample pairs are not treated as independent replicates.</p>
 </div>
 <div class="section level2">
 <h2 id="start-from-your-own-data">Start from your own data<a class="anchor" aria-label="anchor" href="#start-from-your-own-data"></a>
@@ -316,6 +339,7 @@
 <li>all seeds, model warnings, model failures, and decision-gate settings; and</li>
 <li>the exact script that produced the reported tables and figures.</li>
 </ul>
+<p>Persisted public <code>som_*</code> objects carry a structural contract version. <code><a href="reference/upgrade_som_object.html">upgrade_som_object()</a></code> can make only deterministic migrations supported by retained evidence; it asks for recomputation when a scientifically important field cannot be recovered. The object contract is not a substitute for the package version, input provenance or <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>.</p>
 <p>Package-level checks reduce software errors, but they do not establish that a sampling design, candidate <code>k</code>, ecological interpretation, or threshold is appropriate for a particular study.</p>
 </div>
 <div class="section level2">

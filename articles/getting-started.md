@@ -101,6 +101,34 @@ audit$grid_summary
 #> 1                      0
 #> 2                      0
 
+successful_ids <- vapply(
+  Filter(function(fit) isTRUE(fit$success), ensemble$fits),
+  `[[`, character(1), "id"
+)
+representation <- audit_som_representation(
+  ensemble,
+  pairs = data.frame(
+    fit_a = successful_ids[[1]],
+    fit_b = successful_ids[[2]]
+  ),
+  neighbourhood_size = 8
+)
+representation$pairwise
+#>                        fit_a                      fit_b       split_a
+#> 1 subsample_001__g01_3x2_s30 subsample_001__g01_3x2_s31 subsample_001
+#>         split_b grid_a grid_b same_split same_grid    scope n_common_design
+#> 1 subsample_001      1      1       TRUE      TRUE analysis              72
+#>   n_common_mapped joint_mapping_coverage n_sample_pairs
+#> 1              72                      1           2556
+#>   distance_rank_correlation correlation_status neighbourhood_size
+#> 1                 0.2835417           computed                  8
+#>   median_neighbourhood_jaccard neighbourhood_jaccard_q025
+#> 1                          0.4                          0
+#>   neighbourhood_jaccard_q975 median_neighbourhood_size_a
+#> 1                  0.6923077                          11
+#>   median_neighbourhood_size_b neighbourhood_status
+#> 1                          15             computed
+
 partitions <- partition_som(ensemble)
 partitions
 #> <som_partitions>
@@ -168,9 +196,11 @@ comparison$summary
 ```
 
 Quantization error, topographic error and empty-unit rate describe
-different properties of the representation. ARI describes agreement
-between partitions; it is not classification accuracy and it does not
-establish ecological truth.
+different properties of each representation. The experimental cross-fit
+audit describes whether prespecified maps preserve similar sample
+topology; it supplies no ranking or automatic selection. ARI describes
+agreement between partitions; it is not classification accuracy and it
+does not establish ecological truth.
 
 Pareto selection retains candidates that are not dominated across the
 stated criteria. It does not collapse the evidence into a weighted score
@@ -262,6 +292,7 @@ available.
 evaluate_external_labels(consensus)
 #> <som_external_assessment> (post hoc)
 #>   samples used: 90 of 90 
+#>   label match : stored 
 #>   ARI         : 0.680 
 #>   AMI         : 0.676 
 #>   interpretation: agreement, not classification accuracy

@@ -53,7 +53,9 @@ som_data(
 - external_label:
 
   Optional external ecological labels. They are retained for post hoc
-  assessment and never added to the training layers.
+  assessment and never added to the training layers. A fully named
+  vector is aligned to `id`; partial, duplicate or unmatched label IDs
+  are rejected. An unnamed vector is interpreted positionally.
 
 ## Value
 

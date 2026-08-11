@@ -44,6 +44,8 @@ into evidence of ecological truth.
   split;
 - row-, group-, block-, and domain-aware resampling designs;
 - reproducible ensembles across map grids, random seeds, and resamples;
+- exact cross-fit audits of continuous SOM topology under explicit
+  computation budgets;
 - quantization, topology, occupancy, consensus, entropy, Jaccard, ARI,
   and AMI diagnostics;
 - controlled triangulation with K-means, Ward.D2, and, when requested,
@@ -64,6 +66,7 @@ thresholds and should not be combined into an automatic leaderboard.
 | Question | Metrics | Diagnostic direction | Required evidence | Does not establish |
 |----|----|----|----|----|
 | How well does a fitted map represent its analysis data? | Quantization error, topographic error, empty-unit rate | Generally lower within comparable fits; inspect trade-offs | Successful fits using the same variables, preprocessing, scope, and comparable grids | A best map, a true number of classes, or ecological validity |
+| Is the continuous SOM topology reproducible across fitted maps? | Rank correlation of shortest-hop sample-pair distances; optional tie-preserving neighbourhood Jaccard | Higher concordance under the prespecified fit-pair design; inspect coverage and unevaluable cases | Common sample IDs, comparable scopes, successful mappings, and an explicit exact-computation budget | Interchangeable codebooks, a best map, discrete classes, or independent inferential replication |
 | Is a fixed-`k` partition reproducible across the planned ensemble? | Pairwise ARI/AMI, clusterwise Jaccard, joint coverage, complete-partition rate | Agreement and coverage higher; every source partition retains `k` | At least two successful, comparable partitions with adequate shared observations | That discrete types exist, that `k` is optimal, or that labels are correct |
 | How consistently is each sample assigned? | Membership support, assignment entropy, assignment, consensus-label, and replicated coverage | Support and coverage higher; entropy lower | An identifiable consensus with repeated assignments and explicit coverage | A posterior probability or probability that an assignment is correct |
 | Do controlled reference algorithms agree with the SOM partition? | Method-specific SOM-to-reference ARI, method count, reference-fit success | Agreement higher, with all requested methods evaluable | Prespecified reference methods fitted on common splits and preprocessing | Accuracy, independence of evidence, or ecological validation |
@@ -145,12 +148,31 @@ result$consensus$k3$cluster_summary
 result$cross_comparison$summary
 summary(result)
 result$consensus_failures
+
+# Compare one prespecified pair of successful SOM representations.
+successful_ids <- vapply(
+  Filter(function(fit) isTRUE(fit$success), result$ensemble$fits),
+  `[[`, character(1), "id"
+)
+representation <- audit_som_representation(
+  result$ensemble,
+  pairs = data.frame(
+    fit_a = successful_ids[[1]],
+    fit_b = successful_ids[[2]]
+  ),
+  neighbourhood_size = 10
+)
+representation$pairwise
 ```
 
 The workflow reports every requested candidate `k`; it does not silently
 pick one. Gaussian mixture-model comparison is available when the
 suggested package `mclust` is installed and `"gmm"` is requested
 explicitly.
+[`audit_som_representation()`](https://shaowen-ye.github.io/SOMevidence/reference/audit_som_representation.md)
+is experimental and descriptive: it does not score, rank or select maps,
+and its fit pairs and sample pairs are not treated as independent
+replicates.
 
 ## Start from your own data
 
@@ -260,6 +282,14 @@ For a scientific analysis, retain at least:
   and
 - the exact script that produced the reported tables and figures.
 
+Persisted public `som_*` objects carry a structural contract version.
+[`upgrade_som_object()`](https://shaowen-ye.github.io/SOMevidence/reference/upgrade_som_object.md)
+can make only deterministic migrations supported by retained evidence;
+it asks for recomputation when a scientifically important field cannot
+be recovered. The object contract is not a substitute for the package
+version, input provenance or
+[`sessionInfo()`](https://rdrr.io/r/utils/sessionInfo.html).
+
 Package-level checks reduce software errors, but they do not establish
 that a sampling design, candidate `k`, ecological interpretation, or
 threshold is appropriate for a particular study.
@@ -300,6 +330,8 @@ version 3 or later. See
   : Fit a reproducible ensemble of self-organizing maps
 - [`audit_som()`](https://shaowen-ye.github.io/SOMevidence/reference/audit_som.md)
   : Audit representation quality across a SOM ensemble
+- [`audit_som_representation()`](https://shaowen-ye.github.io/SOMevidence/reference/audit_som_representation.md)
+  : Audit reproducibility of continuous SOM representations
 - [`plot_som_plane()`](https://shaowen-ye.github.io/SOMevidence/reference/plot_som_plane.md)
   : Plot an interpretable plane from one SOM ensemble member
 - [`pareto_candidates()`](https://shaowen-ye.github.io/SOMevidence/reference/pareto_candidates.md)
@@ -354,6 +386,8 @@ version 3 or later. See
   : Summarize workflow quality assurance and model outcomes
 - [`run_som_sensitivity()`](https://shaowen-ye.github.io/SOMevidence/reference/run_som_sensitivity.md)
   : Run prespecified SOM sensitivity scenarios
+- [`upgrade_som_object()`](https://shaowen-ye.github.io/SOMevidence/reference/upgrade_som_object.md)
+  : Upgrade a persisted SOMevidence object contract
 
 ## Teaching, examples and interface
 

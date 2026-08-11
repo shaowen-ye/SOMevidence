@@ -11,7 +11,7 @@ and agreement does not make the external labels ecological ground truth."></head
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,7 +46,13 @@ and agreement does not make the external labels ecological ground truth.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">evaluate_external_labels</span><span class="op">(</span><span class="va">consensus</span>, labels <span class="op">=</span> <span class="cn">NULL</span>, exclude <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">evaluate_external_labels</span><span class="op">(</span></span>
+<span>  <span class="va">consensus</span>,</span>
+<span>  labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  exclude <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  label_ids <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  match_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"id"</span>, <span class="st">"position"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -58,8 +64,9 @@ and agreement does not make the external labels ecological ground truth.</p>
 
 
 <dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>
-<dd><p>Optional external labels in sample order. By default, the
-<code>external_label</code> field supplied to <code><a href="som_data.html">som_data()</a></code> is used.</p></dd>
+<dd><p>Optional external labels. By default, the <code>external_label</code>
+field supplied to <code><a href="som_data.html">som_data()</a></code> is used. Supplied labels should be matched
+by stable sample IDs through <code>label_ids</code> or complete <code>names(labels)</code>.</p></dd>
 
 
 <dt id="arg-exclude">exclude<a class="anchor" aria-label="anchor" href="#arg-exclude"></a></dt>
@@ -68,13 +75,47 @@ category. Missing labels and samples without at least two analysis-scope
 assignments are always omitted and counted because one assignment cannot
 provide consensus evidence.</p></dd>
 
+
+<dt id="arg-label-ids">label_ids<a class="anchor" aria-label="anchor" href="#arg-label-ids"></a></dt>
+<dd><p>Optional unique sample identifiers corresponding to
+<code>labels</code>. They may be in any order and may describe a subset of consensus
+samples. IDs not present in the consensus are rejected.</p></dd>
+
+
+<dt id="arg-match-by">match_by<a class="anchor" aria-label="anchor" href="#arg-match-by"></a></dt>
+<dd><p>Matching rule. <code>"auto"</code> uses IDs when available. For an
+unnamed full-length label vector it warns and retains legacy positional
+matching. Use <code>"id"</code> to require identity matching or <code>"position"</code> to make
+full-length positional matching explicit.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>som_external_assessment</code> object containing the contingency table,
-long-form cluster composition, ARI, AMI and sample accounting.</p>
+long-form cluster composition, ARI, AMI, resolved matching information and
+mutually exclusive sample-omission accounting.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="simulate_som_scenario.html">simulate_som_scenario</a></span><span class="op">(</span><span class="st">"clusters"</span>, n <span class="op">=</span> <span class="fl">45</span>, p <span class="op">=</span> <span class="fl">3</span>, seed <span class="op">=</span> <span class="fl">9</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ensemble</span> <span class="op">&lt;-</span> <span class="fu"><a href="fit_som_ensemble.html">fit_som_ensemble</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">data</span>, <span class="fu"><a href="som_spec.html">som_spec</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">2</span><span class="op">)</span>, seeds <span class="op">=</span> <span class="fl">10</span><span class="op">:</span><span class="fl">11</span>, rlen <span class="op">=</span> <span class="fl">10</span>, k <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">consensus</span> <span class="op">&lt;-</span> <span class="fu"><a href="consensus_som.html">consensus_som</a></span><span class="op">(</span><span class="fu"><a href="partition_som.html">partition_som</a></span><span class="op">(</span><span class="va">ensemble</span><span class="op">)</span>, k <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">labels</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">data</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">external_label</span>,</span></span>
+<span class="r-in"><span>  <span class="va">data</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">id</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">evaluate_external_labels</span><span class="op">(</span><span class="va">consensus</span>, <span class="va">labels</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">labels</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;som_external_assessment&gt; (post hoc)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   samples used: 45 of 45 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   label match : id </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   ARI         : 0.480 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   AMI         : 0.616 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   interpretation: agreement, not classification accuracy</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

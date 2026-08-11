@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -154,6 +154,34 @@ deviation is learned from the analysis rows of its own split.</p>
 <span><span class="co">#&gt; 1                      0</span></span>
 <span><span class="co">#&gt; 2                      0</span></span>
 <span></span>
+<span><span class="va">successful_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Filter</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">fit</span><span class="op">$</span><span class="va">success</span><span class="op">)</span>, <span class="va">ensemble</span><span class="op">$</span><span class="va">fits</span><span class="op">)</span>,</span>
+<span>  <span class="va">`[[`</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="st">"id"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">representation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/audit_som_representation.html">audit_som_representation</a></span><span class="op">(</span></span>
+<span>  <span class="va">ensemble</span>,</span>
+<span>  pairs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    fit_a <span class="op">=</span> <span class="va">successful_ids</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>    fit_b <span class="op">=</span> <span class="va">successful_ids</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  neighbourhood_size <span class="op">=</span> <span class="fl">8</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">representation</span><span class="op">$</span><span class="va">pairwise</span></span>
+<span><span class="co">#&gt;                        fit_a                      fit_b       split_a</span></span>
+<span><span class="co">#&gt; 1 subsample_001__g01_3x2_s30 subsample_001__g01_3x2_s31 subsample_001</span></span>
+<span><span class="co">#&gt;         split_b grid_a grid_b same_split same_grid    scope n_common_design</span></span>
+<span><span class="co">#&gt; 1 subsample_001      1      1       TRUE      TRUE analysis              72</span></span>
+<span><span class="co">#&gt;   n_common_mapped joint_mapping_coverage n_sample_pairs</span></span>
+<span><span class="co">#&gt; 1              72                      1           2556</span></span>
+<span><span class="co">#&gt;   distance_rank_correlation correlation_status neighbourhood_size</span></span>
+<span><span class="co">#&gt; 1                 0.2835417           computed                  8</span></span>
+<span><span class="co">#&gt;   median_neighbourhood_jaccard neighbourhood_jaccard_q025</span></span>
+<span><span class="co">#&gt; 1                          0.4                          0</span></span>
+<span><span class="co">#&gt;   neighbourhood_jaccard_q975 median_neighbourhood_size_a</span></span>
+<span><span class="co">#&gt; 1                  0.6923077                          11</span></span>
+<span><span class="co">#&gt;   median_neighbourhood_size_b neighbourhood_status</span></span>
+<span><span class="co">#&gt; 1                          15             computed</span></span>
+<span></span>
 <span><span class="va">partitions</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/partition_som.html">partition_som</a></span><span class="op">(</span><span class="va">ensemble</span><span class="op">)</span></span>
 <span><span class="va">partitions</span></span>
 <span><span class="co">#&gt; &lt;som_partitions&gt;</span></span>
@@ -219,9 +247,11 @@ deviation is learned from the analysis rows of its own split.</p>
 <span><span class="co">#&gt; 5 0.236738852 0.7331537</span></span>
 <span><span class="co">#&gt; 6 0.289493696 0.7055366</span></span></code></pre></div>
 <p>Quantization error, topographic error and empty-unit rate describe
-different properties of the representation. ARI describes agreement
-between partitions; it is not classification accuracy and it does not
-establish ecological truth.</p>
+different properties of each representation. The experimental cross-fit
+audit describes whether prespecified maps preserve similar sample
+topology; it supplies no ranking or automatic selection. ARI describes
+agreement between partitions; it is not classification accuracy and it
+does not establish ecological truth.</p>
 <p>Pareto selection retains candidates that are not dominated across the
 stated criteria. It does not collapse the evidence into a weighted score
 or a model leaderboard. Because the fitted ensemble uses distinct
@@ -300,6 +330,7 @@ available.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/evaluate_external_labels.html">evaluate_external_labels</a></span><span class="op">(</span><span class="va">consensus</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;som_external_assessment&gt; (post hoc)</span></span>
 <span><span class="co">#&gt;   samples used: 90 of 90 </span></span>
+<span><span class="co">#&gt;   label match : stored </span></span>
 <span><span class="co">#&gt;   ARI         : 0.680 </span></span>
 <span><span class="co">#&gt;   AMI         : 0.676 </span></span>
 <span><span class="co">#&gt;   interpretation: agreement, not classification accuracy</span></span></code></pre></div>

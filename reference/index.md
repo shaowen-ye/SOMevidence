@@ -19,6 +19,8 @@
   : Fit a reproducible ensemble of self-organizing maps
 - [`audit_som()`](https://shaowen-ye.github.io/SOMevidence/reference/audit_som.md)
   : Audit representation quality across a SOM ensemble
+- [`audit_som_representation()`](https://shaowen-ye.github.io/SOMevidence/reference/audit_som_representation.md)
+  : Audit reproducibility of continuous SOM representations
 - [`plot_som_plane()`](https://shaowen-ye.github.io/SOMevidence/reference/plot_som_plane.md)
   : Plot an interpretable plane from one SOM ensemble member
 - [`pareto_candidates()`](https://shaowen-ye.github.io/SOMevidence/reference/pareto_candidates.md)
@@ -73,6 +75,8 @@
   : Summarize workflow quality assurance and model outcomes
 - [`run_som_sensitivity()`](https://shaowen-ye.github.io/SOMevidence/reference/run_som_sensitivity.md)
   : Run prespecified SOM sensitivity scenarios
+- [`upgrade_som_object()`](https://shaowen-ye.github.io/SOMevidence/reference/upgrade_som_object.md)
+  : Upgrade a persisted SOMevidence object contract
 
 ## Teaching, examples and interface
 

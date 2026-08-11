@@ -32,13 +32,14 @@ variables <- c(
 )
 keep <- stats::complete.cases(raw[, c(variables, "species", "year")])
 penguins <- raw[keep, , drop = FALSE]
+sample_ids <- sprintf("penguin_%03d", seq_len(nrow(penguins)))
 
 morphology <- som_data(
   x = penguins[, variables],
-  id = sprintf("penguin_%03d", seq_len(nrow(penguins))),
+  id = sample_ids,
   time = penguins$year,
   domain = factor(penguins$year),
-  external_label = penguins$species
+  external_label = stats::setNames(as.character(penguins$species), sample_ids)
 )
 morphology
 #> <som_data>
@@ -230,6 +231,34 @@ transfer$metrics
 #> 10          0.008403361
 #> 11          0.016806723
 #> 12          0.016806723
+
+successful_ids <- vapply(
+  Filter(function(fit) isTRUE(fit$success), workflow$ensemble$fits),
+  `[[`, character(1), "id"
+)
+representation <- audit_som_representation(
+  workflow$ensemble,
+  pairs = data.frame(
+    fit_a = successful_ids[[1]],
+    fit_b = successful_ids[[2]]
+  ),
+  neighbourhood_size = 10
+)
+representation$pairwise
+#>                                 fit_a                               fit_b
+#> 1 leave_domain_001_X2007__g01_4x3_s41 leave_domain_001_X2007__g01_4x3_s42
+#>                  split_a                split_b grid_a grid_b same_split
+#> 1 leave_domain_001_X2007 leave_domain_001_X2007      1      1       TRUE
+#>   same_grid    scope n_common_design n_common_mapped joint_mapping_coverage
+#> 1      TRUE analysis             233             233                      1
+#>   n_sample_pairs distance_rank_correlation correlation_status
+#> 1          27028                 0.7499548           computed
+#>   neighbourhood_size median_neighbourhood_jaccard neighbourhood_jaccard_q025
+#> 1                 10                    0.7037037                 0.02655945
+#>   neighbourhood_jaccard_q975 median_neighbourhood_size_a
+#> 1                          1                          21
+#>   median_neighbourhood_size_b neighbourhood_status
+#> 1                          21             computed
 ```
 
 ``` r
@@ -257,6 +286,9 @@ Quantization and topographic errors concern the SOM representation. ARI
 and AMI between SOM and reference partitions concern agreement under a
 shared analysis design. Held-year distance and occupancy diagnostics
 concern transfer. None of these quantities is classification accuracy.
+The experimental topology comparison is likewise descriptive and applies
+only to the prespecified fit pair and jointly mapped observations shown
+above.
 
 ## Inspect external labels only after consensus
 
@@ -271,6 +303,7 @@ external <- evaluate_external_labels(consensus_k3)
 external
 #> <som_external_assessment> (post hoc)
 #>   samples used: 342 of 342 
+#>   label match : stored 
 #>   ARI         : 0.938 
 #>   AMI         : 0.912 
 #>   interpretation: agreement, not classification accuracy
@@ -308,7 +341,7 @@ exact analysis choices with any reported result.
 ``` r
 
 packageVersion("SOMevidence")
-#> [1] '1.1.3'
+#> [1] '1.2.0'
 packageVersion("palmerpenguins")
 #> [1] '0.1.1'
 sessionInfo()
@@ -333,7 +366,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] SOMevidence_1.1.3
+#> [1] SOMevidence_1.2.0
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6         jsonlite_2.0.0       kohonen_3.0.13      

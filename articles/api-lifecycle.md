@@ -9,9 +9,10 @@ package therefore ships machine-readable contracts for both exported
 functions and returned objects.
 
 The version 1.0.0 contracts remain the structural compatibility
-baseline. The current 1.1.0 contracts describe additive interfaces and
-scientific corrections that make previously implicit safeguards
-observable. Structural compatibility does not imply that an analysis
+baseline, and the version 1.1.0 contracts remain unchanged as a
+historical release record. The current 1.2.0 contracts add exact
+default-expression records and structural contract versions for public
+result objects. Structural compatibility does not imply that an analysis
 which omits version-sensitive defaults will be numerically identical
 across releases.
 
@@ -26,21 +27,29 @@ baseline_api <- utils::read.csv(
   check.names = FALSE
 )
 api_contract <- utils::read.csv(
-  contract_path("api-contract-v1.1.0.csv"),
+  contract_path("api-contract-v1.2.0.csv"),
+  check.names = FALSE
+)
+api_formals <- utils::read.csv(
+  contract_path("api-formals-v1.2.0.csv"),
   check.names = FALSE
 )
 object_contract <- utils::read.csv(
-  contract_path("object-contract-v1.1.0.csv"),
+  contract_path("object-contract-v1.2.0.csv"),
+  check.names = FALSE
+)
+migrations <- utils::read.csv(
+  contract_path("object-migrations-v1.2.0.csv"),
   check.names = FALSE
 )
 
 c(baseline_exports = nrow(baseline_api), current_exports = nrow(api_contract))
 #> baseline_exports  current_exports 
-#>               23               23
+#>               23               25
 table(api_contract$lifecycle)
 #> 
 #> experimental       stable 
-#>            3           20
+#>            4           21
 head(object_contract[c("class", "lifecycle")])
 #>            class lifecycle
 #> 1       som_data    stable
@@ -49,12 +58,45 @@ head(object_contract[c("class", "lifecycle")])
 #> 4       som_spec    stable
 #> 5   som_ensemble    stable
 #> 6      som_audit    stable
+head(migrations[c("class", "automatic")])
+#>                     class   automatic
+#> 1                som_data         yes
+#> 2           som_resamples conditional
+#> 3          som_partitions         yes
+#> 4           som_consensus conditional
+#> 5 som_external_assessment          no
+#> 6            som_workflow conditional
 ```
 
-Automated tests require all baseline arguments to remain present and in
-their original order. They also compare the current namespace, complete
-function formals, key defaults, return classes, object components, and
-selected evidence table schemas with the 1.1.0 contracts.
+Automated tests require all historical stable arguments to remain
+present as an order-preserving prefix. They also compare the current
+namespace, complete function formals and defaults, return classes,
+object components, required attributes, and selected evidence-table
+schemas with the 1.2.0 contracts.
+
+## What changed in the 1.2.0 contract
+
+The current contract adds three linked safeguards:
+
+- external labels can be joined by validated sample identity, with
+  explicit record states for absent, missing, excluded, unassigned and
+  insufficiently replicated observations;
+- every public result object records `som_contract_version = "1.2.0"`,
+  and
+  [`upgrade_som_object()`](https://shaowen-ye.github.io/SOMevidence/reference/upgrade_som_object.md)
+  performs only deterministic migrations supported by retained evidence;
+  and
+- experimental
+  [`audit_som_representation()`](https://shaowen-ye.github.io/SOMevidence/reference/audit_som_representation.md)
+  compares continuous topology across prespecified fit pairs through
+  shortest-hop grid distances and optional tie-preserving neighbourhood
+  overlap.
+
+The representation audit uses exact fit-pair and sample-pair budgets. It
+has no score, rank, default scientific threshold or automatic selection
+rule, and it cannot be passed to
+[`assess_defensibility()`](https://shaowen-ye.github.io/SOMevidence/reference/assess_defensibility.md)
+as hard-partition evidence.
 
 ## What changed in the 1.1.0 contract
 
@@ -116,20 +158,22 @@ version. Analysis-affecting default changes must be explicit in a
 versioned contract and release notes; publication workflows should still
 record every consequential setting directly.
 
-Three interfaces remain experimental:
+Four interfaces remain experimental:
 
 ``` r
 
 api_contract[api_contract$lifecycle == "experimental",
              c("function", "return_class", "notes")]
-#>                 function    return_class
-#> 10        launch_som_app    shiny.appobj
-#> 16   run_som_sensitivity som_sensitivity
-#> 18 simulate_som_scenario        som_data
-#>                                                                                                   notes
-#> 10 Returns an optional Shiny application; the exported R script remains the executable analysis record.
-#> 16              Preserves scenario-level and model-stage failures even when full workflows are omitted.
-#> 18                                   Research and teaching utility whose scenario catalogue may expand.
+#>                    function             return_class
+#> 3  audit_som_representation som_representation_audit
+#> 11           launch_som_app             shiny.appobj
+#> 17      run_som_sensitivity          som_sensitivity
+#> 19    simulate_som_scenario                 som_data
+#>                                                                                                                       notes
+#> 3  Reports exact cross-fit topology reproducibility under explicit computation budgets without ranking or selecting models.
+#> 11                     Returns an optional Shiny application; the exported R script remains the executable analysis record.
+#> 17                                  Preserves scenario-level and model-stage failures even when full workflows are omitted.
+#> 19                                                       Research and teaching utility whose scenario catalogue may expand.
 ```
 
 [`launch_som_app()`](https://shaowen-ye.github.io/SOMevidence/reference/launch_som_app.md)
@@ -142,14 +186,17 @@ remotely deployed app, Shiny transfers it to that host. Its YAML export
 is a configuration snapshot. The exported R script can be rerun, but it
 becomes part of a reproducible record only when retained with the exact
 input, software versions, warnings, failures, and results. The
-sensitivity and simulation interfaces also remain experimental because
-their scenario descriptions may evolve after broader use.
+sensitivity, simulation and continuous-representation audit interfaces
+also remain experimental because their scenario descriptions or
+reporting structures may evolve after broader use.
 
 ## Object boundaries are scientific boundaries
 
 The returned classes keep distinct questions apart:
 
 - `som_audit` concerns representation quality;
+- `som_representation_audit` concerns exact cross-fit topology
+  concordance, not map selection or partition defensibility;
 - `som_partitions` and `som_consensus` concern analysis-scope
   hard-partition stability;
 - `som_cross_comparison` concerns algorithmic agreement;
@@ -180,7 +227,7 @@ sampling design, and gate settings with every analysis:
 ``` r
 
 packageVersion("SOMevidence")
-#> [1] '1.1.3'
+#> [1] '1.2.0'
 sessionInfo()
 #> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
@@ -216,3 +263,14 @@ For work intended to support a publication, also retain the exact data
 provenance, stable sample identifiers, preprocessing specification,
 random seeds, model failures, warnings, model budget, and API contract
 version used by the analysis.
+
+The structural object contract is distinct from analysis provenance. It
+tells software which fields are present; it does not identify the
+package build, algorithm version or scientific choices that created
+those fields. If an older object lacks evidence required by the current
+contract, recomputation is safer than migration:
+
+``` r
+
+upgraded <- upgrade_som_object(saved_result)
+```

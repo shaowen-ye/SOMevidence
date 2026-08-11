@@ -58,4 +58,6 @@ som_preprocess(transform = c("log", "identity"))
 #> 
 #> attr(,"class")
 #> [1] "som_preprocess"
+#> attr(,"som_contract_version")
+#> [1] "1.2.0"
 ```
