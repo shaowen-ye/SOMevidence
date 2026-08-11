@@ -1,6 +1,6 @@
 Package: SOMevidence
 Title: Evidence Workflows for Self-Organizing Map Classification
-Version: 1.0.1
+Version: 1.1.0
 Authors@R: person("Shaowen", "Ye", role = c("aut", "cre"),
                   email = "yeshaowen2119@gmail.com")
 Description: Provides explicit data-design objects, leakage-safe preprocessing,
@@ -8,18 +8,21 @@ Description: Provides explicit data-design objects, leakage-safe preprocessing,
     and evidence-oriented diagnostics for ecological, environmental and
     evolutionary applications. The package separates the reproducibility of a
     continuous representation from the defensibility of a hard partition and
-    supports explicit abstention when evidence is insufficient.
+    supports explicit abstention when evidence is insufficient. Self-organizing
+    maps follow Kohonen (1982) <doi:10.1007/BF00337288>, using the 'kohonen'
+    implementation described by Wehrens and Kruisselbrink (2018)
+    <doi:10.18637/jss.v087.i07>.
 License: GPL (>= 3)
-URL: https://shaowen-ye.r-universe.dev/SOMevidence,
+URL: https://shaowen-ye.github.io/SOMevidence/,
+    https://shaowen-ye.r-universe.dev/SOMevidence,
     https://github.com/shaowen-ye/SOMevidence
 BugReports: https://github.com/shaowen-ye/SOMevidence/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.2.0)
 Imports: clue, kohonen, stats, withr (>= 2.5.0)
-Suggests: digest, future, future.apply, ggplot2, knitr, mclust,
-        palmerpenguins, readxl, rmarkdown, shiny, testthat (>= 3.0.0),
-        yaml
+Suggests: future, future.apply, ggplot2, knitr, mclust, palmerpenguins,
+        rmarkdown, shiny, testthat (>= 3.0.0), yaml
 Config/testthat/edition: 3
 Config/Needs/coverage: covr
 Config/Needs/documentation: roxygen2

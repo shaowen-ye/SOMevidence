@@ -6,10 +6,38 @@
   )
   assignment <- clue::solve_LSAP(contingency, maximum = TRUE)
   mapping <- as.integer(assignment)
-  mapping[rowSums(contingency) == 0L] <- NA_integer_
+  supported_match <- contingency[cbind(seq_len(k), mapping)] > 0L
+  mapping[!supported_match] <- NA_integer_
   aligned <- rep(NA_integer_, length(labels))
   aligned[!is.na(labels)] <- mapping[as.integer(labels[!is.na(labels)])]
   aligned
+}
+
+.align_labels_from_parents <- function(labels, parents, k) {
+  if (is.null(dim(parents))) {
+    parents <- matrix(parents, ncol = 1L)
+  }
+  repeated_labels <- rep(labels, ncol(parents))
+  parent_labels <- as.vector(parents)
+  keep <- !is.na(repeated_labels) & !is.na(parent_labels)
+  contingency <- table(
+    factor(repeated_labels[keep], levels = seq_len(k)),
+    factor(parent_labels[keep], levels = seq_len(k))
+  )
+  assignment <- clue::solve_LSAP(contingency, maximum = TRUE)
+  mapping <- as.integer(assignment)
+  supported_match <- contingency[cbind(seq_len(k), mapping)] > 0L
+  mapping[!supported_match] <- NA_integer_
+  output <- rep(NA_integer_, length(labels))
+  output[!is.na(labels)] <- mapping[as.integer(labels[!is.na(labels)])]
+  parent_support <- colSums(
+    !is.na(parents) & !is.na(labels)
+  ) > 0L
+  list(
+    labels = output,
+    n_joint = sum(keep),
+    parent_support = parent_support
+  )
 }
 
 .medoid_partition <- function(records) {
@@ -52,6 +80,76 @@
   length(reached) == n_records
 }
 
+.propagate_alignment <- function(records, reference_index, k) {
+  n_records <- length(records)
+  aligned <- vector("list", n_records)
+  aligned[[reference_index]] <- records[[reference_index]]$sample_labels
+  reached <- reference_index
+  diagnostics <- list()
+
+  while (length(reached) < n_records) {
+    candidates <- list()
+    cursor <- 0L
+    parent_matrix <- do.call(cbind, aligned[reached])
+    for (child in setdiff(seq_len(n_records), reached)) {
+      child_labels <- records[[child]]$sample_labels
+      candidate <- .align_labels_from_parents(
+        child_labels, parent_matrix, k
+      )
+      raw_clusters <- sort(unique(stats::na.omit(child_labels)))
+      resolved_clusters <- sort(unique(stats::na.omit(candidate$labels)))
+      if (length(resolved_clusters) == length(raw_clusters)) {
+        cursor <- cursor + 1L
+        candidates[[cursor]] <- list(
+          parents = reached[candidate$parent_support],
+          child = child,
+          n_joint = candidate$n_joint,
+          alignment = candidate$labels,
+          n_child_clusters = length(raw_clusters),
+          n_resolved_clusters = length(resolved_clusters)
+        )
+      }
+    }
+    if (!length(candidates)) {
+      .abort(paste0(
+        "Consensus labels could not be propagated through the partition-",
+        "overlap graph because an intermediate mapping was unidentifiable."
+      ))
+    }
+    selected <- candidates[[which.max(vapply(
+      candidates, `[[`, numeric(1), "n_joint"
+    ))]]
+    child <- selected$child
+    aligned[[child]] <- selected$alignment
+    diagnostics[[length(diagnostics) + 1L]] <- data.frame(
+      parent_fit = paste(vapply(
+        records[selected$parents], `[[`, character(1), "id"
+      ), collapse = ";"),
+      n_parent_fits = length(selected$parents),
+      child_fit = records[[child]]$id,
+      n_joint = as.integer(selected$n_joint),
+      n_child_clusters = selected$n_child_clusters,
+      n_resolved_clusters = selected$n_resolved_clusters,
+      stringsAsFactors = FALSE
+    )
+    reached <- c(reached, child)
+  }
+
+  alignment <- do.call(cbind, aligned)
+  colnames(alignment) <- vapply(records, `[[`, character(1), "id")
+  diagnostic_table <- if (length(diagnostics)) {
+    do.call(rbind, diagnostics)
+  } else {
+    data.frame(
+      parent_fit = character(), n_parent_fits = integer(),
+      child_fit = character(), n_joint = integer(),
+      n_child_clusters = integer(), n_resolved_clusters = integer(),
+      stringsAsFactors = FALSE
+    )
+  }
+  list(aligned = alignment, diagnostics = diagnostic_table)
+}
+
 .consensus_vote <- function(aligned, reference) {
   vapply(seq_len(nrow(aligned)), function(i) {
     observed <- aligned[i, !is.na(aligned[i, ])]
@@ -84,9 +182,21 @@
 #'   dense co-assignment matrix. Set this deliberately because memory grows
 #'   quadratically with sample count.
 #'
-#' @return A `som_consensus` object containing the co-assignment matrix,
-#'   aligned assignments, assignment and replicated-assignment coverage,
-#'   membership support, assignment entropy and clusterwise Jaccard values.
+#' @return A `som_consensus` object containing aligned assignments,
+#'   partition-assignment, consensus-label and replicated
+#'   coverage, membership support, assignment entropy and clusterwise Jaccard
+#'   values. The object also records whether the consensus itself retains all
+#'   requested clusters. For co-assignment consensus, `coassignment` and `tree`
+#'   contain the dense matrix and its hierarchical clustering; both are `NULL`
+#'   for aligned voting. Aligned voting avoids quadratic growth in sample
+#'   count, but
+#'   alignment and upstream partition auditing can still grow quadratically in
+#'   the number of ensemble members.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 3)
+#' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+#' ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+#' consensus_som(partition_som(ensemble), k = 2)
 #' @export
 consensus_som <- function(
   partitions,
@@ -98,12 +208,27 @@ consensus_som <- function(
   if (!inherits(partitions, "som_partitions")) {
     .abort("`partitions` must come from `partition_som()`.")
   }
-  .assert_scalar_number(k, "k", lower = 2)
+  .assert_scalar_integer(k, "k", lower = 2)
   method <- match.arg(method)
-  .assert_scalar_number(max_coassignment_n, "max_coassignment_n", lower = 2)
+  .assert_scalar_integer(
+    max_coassignment_n, "max_coassignment_n", lower = 2
+  )
   records <- Filter(function(x) x$k == k, partitions$records)
   if (length(records) < 2L) {
     .abort("Consensus auditing requires at least two partitions for the chosen `k`.")
+  }
+  incomplete_records <- vapply(records, function(record) {
+    length(unique(stats::na.omit(record$sample_labels))) != k
+  }, logical(1))
+  if (any(incomplete_records)) {
+    .abort(paste0(
+      "Consensus at k = ", k, " requires all k sample-level clusters in ",
+      "every partition. Incomplete fits: ",
+      paste(
+        vapply(records[incomplete_records], `[[`, character(1), "id"),
+        collapse = ", "
+      ), "."
+    ))
   }
   n <- unique(vapply(records, function(x) length(x$sample_labels), integer(1)))
   if (length(n) != 1L) .abort("All partitions must describe the same samples.")
@@ -121,6 +246,12 @@ consensus_som <- function(
   }
 
   coassignment <- tree <- NULL
+  alignment_diagnostics <- data.frame(
+    parent_fit = character(), n_parent_fits = integer(),
+    child_fit = character(), n_joint = integer(),
+    n_child_clusters = integer(), n_resolved_clusters = integer(),
+    stringsAsFactors = FALSE
+  )
   if (selected_method == "coassignment") {
     if (n > max_coassignment_n && method == "coassignment") {
       .abort(paste0(
@@ -157,14 +288,9 @@ consensus_som <- function(
     }
     reference_index <- .medoid_partition(records)
     reference <- records[[reference_index]]$sample_labels
-    initial_alignment <- vapply(
-      records,
-      function(record) .align_labels(record$sample_labels, reference, k),
-      integer(n)
-    )
-    if (is.null(dim(initial_alignment))) {
-      initial_alignment <- matrix(initial_alignment, ncol = 1L)
-    }
+    propagated <- .propagate_alignment(records, reference_index, k)
+    initial_alignment <- propagated$aligned
+    alignment_diagnostics <- propagated$diagnostics
     consensus_labels <- .consensus_vote(initial_alignment, reference)
   }
 
@@ -178,6 +304,12 @@ consensus_som <- function(
 
   assignment_count <- rowSums(!is.na(aligned))
   assignment_coverage <- mean(assignment_count > 0L)
+  consensus_label_coverage <- mean(!is.na(consensus_labels))
+  observed_consensus_clusters <- sort(unique(stats::na.omit(
+    consensus_labels
+  )))
+  n_consensus_clusters <- length(observed_consensus_clusters)
+  complete_consensus_k <- n_consensus_clusters == k
   replicated_assignment_coverage <- mean(assignment_count >= 2L)
   membership_support <- rowMeans(
     aligned == consensus_labels,
@@ -219,9 +351,10 @@ consensus_som <- function(
   }))
   cluster_summary <- do.call(rbind, lapply(split(jaccard, jaccard$cluster), function(x) {
     interval <- .quantile_safe(x$jaccard, c(0.025, 0.975))
+    finite <- x$jaccard[is.finite(x$jaccard)]
     data.frame(
       cluster = x$cluster[[1L]],
-      median_jaccard = stats::median(x$jaccard, na.rm = TRUE),
+      median_jaccard = if (length(finite)) stats::median(finite) else NA_real_,
       jaccard_q025 = interval[[1L]],
       jaccard_q975 = interval[[2L]],
       stringsAsFactors = FALSE
@@ -241,7 +374,12 @@ consensus_som <- function(
       assignment_entropy = assignment_entropy,
       assignment_count = assignment_count,
       assignment_coverage = assignment_coverage,
+      consensus_label_coverage = consensus_label_coverage,
+      observed_consensus_clusters = as.integer(observed_consensus_clusters),
+      n_consensus_clusters = n_consensus_clusters,
+      complete_consensus_k = complete_consensus_k,
       replicated_assignment_coverage = replicated_assignment_coverage,
+      alignment_diagnostics = alignment_diagnostics,
       clusterwise_jaccard = jaccard,
       cluster_summary = cluster_summary,
       metadata = partitions$ensemble$data$metadata,
@@ -262,6 +400,11 @@ print.som_consensus <- function(x, ...) {
   cat("  samples            :", length(x$consensus_labels), "\n")
   cat("  assigned at least once:", sum(x$assignment_count > 0L), "\n")
   cat("  assignment coverage:", sprintf("%.3f", x$assignment_coverage), "\n")
+  cat("  consensus coverage :", sprintf(
+    "%.3f", x$consensus_label_coverage %||% x$assignment_coverage
+  ), "\n")
+  cat("  consensus clusters :", x$n_consensus_clusters %||%
+        length(unique(stats::na.omit(x$consensus_labels))), "/", x$k, "\n")
   cat("  replicated coverage:", sprintf(
     "%.3f", x$replicated_assignment_coverage
   ), "\n")

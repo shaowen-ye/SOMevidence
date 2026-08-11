@@ -5,3 +5,11 @@
 ^_pkgdown\.yml$
 ^SOMevidence_.*\.tar\.gz$
 ^.*\.Rcheck$
+^\.DS_Store$
+^\.lintr$
+^CITATION\.cff$
+^CONTRIBUTING\.md$
+^LICENSE\.md$
+^LICENSE$
+^SUPPORT\.md$
+^SECURITY\.md$

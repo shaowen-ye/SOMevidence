@@ -15,3 +15,6 @@ A data frame with one row per grid and random seed.
 \description{
 Expand an ensemble specification into its model budget
 }
+\examples{
+expand_som_spec(som_spec(c(4, 3), seeds = 1:3, rlen = 20, k = 2:3))
+}

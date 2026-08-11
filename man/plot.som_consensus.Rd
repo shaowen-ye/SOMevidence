@@ -15,7 +15,9 @@
 \arguments{
 \item{x}{A \code{som_consensus} object.}
 
-\item{type}{Either \code{"support"} or \code{"heatmap"}.}
+\item{type}{Either \code{"support"} or \code{"heatmap"}. A heatmap requires a
+co-assignment consensus; aligned voting does not create a dense
+co-assignment matrix.}
 
 \item{samples}{Optional sample indices for a heatmap.}
 

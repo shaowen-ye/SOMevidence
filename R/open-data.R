@@ -1,8 +1,11 @@
-#' List governed open-data sources used in examples and validation
+#' List governed tutorial and candidate open-data sources
 #'
-#' The registry records provenance, version, licence and the intended role of
-#' each external dataset. The function returns metadata only; it never
-#' downloads data or changes the user's files.
+#' The registry records provenance, version, licence, implementation status and
+#' the intended role of each external dataset. Only records marked
+#' `implemented` are used by a current package tutorial. Candidate records are
+#' governed prospects, not claims of completed package validation. The
+#' function returns metadata only; it never downloads data or changes the
+#' user's files.
 #'
 #' @param role Optional role used to filter the registry.
 #' @param domain Optional scientific domain used to filter the registry.

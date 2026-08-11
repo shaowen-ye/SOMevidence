@@ -1,9 +1,9 @@
 #' Simulate known-structure data for SOM validation
 #'
 #' @section Lifecycle:
-#' Experimental. Existing scenario names are retained during candidate v0.1
-#' testing, but the simulation catalogue and scenario-specific controls may
-#' expand before the first stable release.
+#' Experimental. Existing scenario names are retained within the 1.x series,
+#' while new scenarios and scenario-specific controls may be added in minor
+#' releases.
 #'
 #' @param scenario One of `"gradient"`, `"clusters"`, `"overlap"`,
 #'   `"grouped_pseudoreplication"` or `"multilayer_conflict"`.
@@ -34,6 +34,11 @@
 #'   components. Known latent variables and labels are never included in the
 #'   training layers. Discrete labels are also copied to `external_label` for
 #'   post hoc agreement assessment.
+#' @examples
+#' simulated <- simulate_som_scenario(
+#'   "gradient", n = 60, p = 4, seed = 1, domain_shift = 0.5
+#' )
+#' simulated
 #' @export
 simulate_som_scenario <- function(
   scenario = c(
@@ -53,11 +58,12 @@ simulate_som_scenario <- function(
 ) {
   scenario <- match.arg(scenario)
   missing_mechanism <- match.arg(missing_mechanism)
-  .assert_scalar_number(n, "n", lower = 30)
-  .assert_scalar_number(p, "p", lower = 2)
+  .assert_scalar_integer(n, "n", lower = 30)
+  .assert_scalar_integer(p, "p", lower = 2)
+  .assert_scalar_integer(seed, "seed", lower = 0)
   .assert_scalar_number(noise_sd, "noise_sd", lower = .Machine$double.eps)
   .assert_scalar_number(group_icc, "group_icc", lower = 0, upper = 0.95)
-  .assert_scalar_number(n_domains, "n_domains", lower = 2)
+  .assert_scalar_integer(n_domains, "n_domains", lower = 2)
   .assert_scalar_number(domain_shift, "domain_shift", lower = 0)
   .assert_scalar_number(missing_rate, "missing_rate", lower = 0, upper = 0.8)
   n <- as.integer(n)
@@ -74,13 +80,14 @@ simulate_som_scenario <- function(
   discrete <- scenario != "gradient"
   if (discrete) {
     if (!is.numeric(class_probs) || length(class_probs) != 3L ||
-          anyNA(class_probs) || any(class_probs <= 0)) {
+          anyNA(class_probs) || any(!is.finite(class_probs)) ||
+          any(class_probs <= 0)) {
       .abort("`class_probs` must contain three positive numbers.")
     }
     class_probs <- class_probs / sum(class_probs)
   }
   if (!is.null(n_groups)) {
-    .assert_scalar_number(n_groups, "n_groups", lower = 6, upper = n)
+    .assert_scalar_integer(n_groups, "n_groups", lower = 6, upper = n)
     n_groups <- as.integer(n_groups)
   }
 
@@ -168,7 +175,7 @@ simulate_som_scenario <- function(
     missing_mechanism == "domain"
   if (needs_domains && is.null(generated$domain_id)) {
     generated$domain_id <- .with_reproducible_seed(
-      as.integer(seed) + 7919L,
+      .seed_from_key(seed, "simulation_domains"),
       balanced_ids(n, n_domains)
     )
   }
@@ -184,16 +191,18 @@ simulate_som_scenario <- function(
 
   missing_mask <- matrix(FALSE, nrow = n, ncol = p)
   if (missing_rate > 0) {
-    missing_mask <- .with_reproducible_seed(as.integer(seed) + 1543L, {
-      if (missing_mechanism == "mcar") {
-        matrix(stats::runif(n * p) < missing_rate, nrow = n)
-      } else {
-        probability <- rep(missing_rate / 3, n)
-        probability[generated$domain_id == n_domains] <-
-          min(0.95, missing_rate * 2)
-        matrix(stats::runif(n * p) < probability, nrow = n)
+    missing_mask <- .with_reproducible_seed(
+      .seed_from_key(seed, "simulation_missingness"), {
+        if (missing_mechanism == "mcar") {
+          matrix(stats::runif(n * p) < missing_rate, nrow = n)
+        } else {
+          probability <- rep(missing_rate / 3, n)
+          probability[generated$domain_id == n_domains] <-
+            min(0.95, missing_rate * 2)
+          matrix(stats::runif(n * p) < probability, nrow = n)
+        }
       }
-    })
+    )
     # Retain at least two measured variables per sample and one value per column.
     for (i in seq_len(n)) {
       if (sum(!missing_mask[i, ]) < 2L) missing_mask[i, seq_len(2L)] <- FALSE

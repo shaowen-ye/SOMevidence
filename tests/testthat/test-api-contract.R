@@ -6,8 +6,45 @@ read_contract <- function(filename) {
   utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
-test_that("version 1.0.0 exports and arguments match the API contract", {
+test_that("version 1.0.0 function and argument contracts remain compatible", {
   api <- read_contract("api-contract-v1.0.0.csv")
+  expect_true(all(api[["function"]] %in% getNamespaceExports("SOMevidence")))
+
+  for (i in seq_len(nrow(api))) {
+    function_name <- api[["function"]][[i]]
+    expected <- api$arguments[[i]]
+    expected <- if (is.na(expected) || !nzchar(expected)) {
+      character()
+    } else {
+      strsplit(expected, "|", fixed = TRUE)[[1L]]
+    }
+    observed <- names(formals(getExportedValue("SOMevidence", function_name)))
+    if (is.null(observed)) observed <- character()
+    if (api$lifecycle[[i]] == "stable") {
+      expect_true(
+        length(observed) >= length(expected),
+        info = function_name
+      )
+      expect_identical(
+        observed[seq_along(expected)], expected,
+        info = function_name
+      )
+    } else {
+      positions <- match(expected, observed)
+      expect_false(anyNA(positions), info = function_name)
+      expect_identical(positions, sort(positions), info = function_name)
+    }
+  }
+
+  experimental <- api[["function"]][api$lifecycle == "experimental"]
+  expect_setequal(
+    experimental,
+    c("launch_som_app", "run_som_sensitivity", "simulate_som_scenario")
+  )
+})
+
+test_that("version 1.1.0 exports and arguments match the current contract", {
+  api <- read_contract("api-contract-v1.1.0.csv")
   expect_setequal(getNamespaceExports("SOMevidence"), api[["function"]])
   expect_equal(length(getNamespaceExports("SOMevidence")), nrow(api))
 
@@ -24,32 +61,15 @@ test_that("version 1.0.0 exports and arguments match the API contract", {
     expect_identical(observed, expected, info = function_name)
   }
 
-  experimental <- api[["function"]][api$lifecycle == "experimental"]
-  expect_setequal(
-    experimental,
-    c("launch_som_app", "run_som_sensitivity", "simulate_som_scenario")
+  expect_identical(
+    formals(run_som_workflow)$cross_models,
+    quote(c("kmeans", "ward"))
   )
+  expect_identical(formals(fit_cross_models)$gmm_seed, 1L)
   expect_identical(
     api$return_class[api[["function"]] == "launch_som_app"],
-    "interactive_side_effect"
+    "shiny.appobj"
   )
-})
-
-test_that("API validation distinguishes tested returns from GUI exceptions", {
-  path <- testthat::test_path(
-    "..", "..", "benchmarks", "results", "api_contract_validation.csv"
-  )
-  skip_if_not(file.exists(path), "API validation result is not built yet")
-  validation <- utils::read.csv(path, stringsAsFactors = FALSE)
-
-  expect_false(any(validation$check == "runtime_return:launch_som_app"))
-  expect_true(any(
-    validation$check == "runtime_exception_documented:launch_som_app" &
-      validation$passed
-  ))
-  expect_true(any(
-    validation$check == "runtime_return_coverage" & validation$passed
-  ))
 })
 
 test_that("version 1.0.0 objects satisfy their structural contract", {
@@ -123,4 +143,32 @@ test_that("version 1.0.0 objects satisfy their structural contract", {
       info = paste(class_name, "missing", paste(setdiff(required, names(object)), collapse = ", "))
     )
   }
+
+  current_contract <- read_contract("object-contract-v1.1.0.csv")
+  expect_setequal(names(objects), current_contract$class)
+  for (i in seq_len(nrow(current_contract))) {
+    class_name <- current_contract$class[[i]]
+    required <- strsplit(
+      current_contract$required_components[[i]], "|", fixed = TRUE
+    )[[1L]]
+    expect_true(
+      all(required %in% names(objects[[class_name]])),
+      info = paste(
+        class_name, "missing",
+        paste(setdiff(required, names(objects[[class_name]])), collapse = ", ")
+      )
+    )
+  }
+
+  expect_true(all(c(
+    "grid", "median_quantization_error", "median_topographic_error"
+  ) %in% names(workflow$audit$grid_summary)))
+  expect_true(all(c(
+    "n_partitions", "n_complete_partitions", "min_observed_clusters"
+  ) %in% names(workflow$partitions$stability)))
+  expect_true(all(c(
+    "n_analysis_mapped", "n_assessment_mapped",
+    "analysis_mapping_coverage", "assessment_mapping_coverage"
+  ) %in% names(transfer$metrics)))
+  expect_true("mapping_coverage" %in% names(mapping$summary))
 })

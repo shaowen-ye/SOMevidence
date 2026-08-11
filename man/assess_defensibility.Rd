@@ -31,5 +31,8 @@ assess_defensibility(
 A \code{som_defensibility} object containing evidence and reasons.
 }
 \description{
-Assess partition defensibility without forcing a verdict
+In addition to analyst-defined thresholds, the assessment checks that every
+source partition and the consensus retain the requested \code{k}, and that all
+requested cross-model fits succeeded. Missing audit evidence produces an
+uncertain result rather than being treated as a pass.
 }

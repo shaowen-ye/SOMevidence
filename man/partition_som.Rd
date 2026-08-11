@@ -8,7 +8,8 @@ partition_som(
   ensemble,
   k = ensemble$spec$k,
   method = "ward.D2",
-  scope = c("analysis", "all")
+  scope = c("analysis", "all"),
+  max_pairwise_comparisons = 1000000L
 )
 }
 \arguments{
@@ -22,10 +23,20 @@ partition_som(
 used to fit a given ensemble member. \code{"all"} explicitly audits the
 stability of mapped labels for all rows and must not be used as training-
 partition evidence in \code{\link[=assess_defensibility]{assess_defensibility()}}.}
+
+\item{max_pairwise_comparisons}{Maximum number of pairwise partition
+comparisons created across all requested \code{k}. This explicit budget guards
+against quadratic growth in the number of ensemble members.}
 }
 \value{
 A \code{som_partitions} object. Agreement is reported as ARI, not accuracy.
 }
 \description{
 Form and compare candidate hard partitions of SOM units
+}
+\examples{
+data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 2)
+specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+partition_som(ensemble)
 }

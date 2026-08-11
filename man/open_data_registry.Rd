@@ -2,7 +2,7 @@
 % Please edit documentation in R/open-data.R
 \name{open_data_registry}
 \alias{open_data_registry}
-\title{List governed open-data sources used in examples and validation}
+\title{List governed tutorial and candidate open-data sources}
 \usage{
 open_data_registry(role = NULL, domain = NULL)
 }
@@ -15,9 +15,12 @@ open_data_registry(role = NULL, domain = NULL)
 A data frame with one row per governed external dataset.
 }
 \description{
-The registry records provenance, version, licence and the intended role of
-each external dataset. The function returns metadata only; it never
-downloads data or changes the user's files.
+The registry records provenance, version, licence, implementation status and
+the intended role of each external dataset. Only records marked
+\code{implemented} are used by a current package tutorial. Candidate records are
+governed prospects, not claims of completed package validation. The
+function returns metadata only; it never downloads data or changes the
+user's files.
 }
 \examples{
 open_data_registry(role = "quickstart")

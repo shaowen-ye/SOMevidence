@@ -30,18 +30,28 @@ som_data(
 \item{domain}{Optional monitoring-domain identifiers.}
 
 \item{weight}{Optional non-negative survey or summary weights. These weights
-are retained for design summaries and are not silently used as SOM
-training weights.}
+are retained only as metadata in the current release. They are not used
+in SOM training, evidence metrics or design summaries.}
 
 \item{external_label}{Optional external ecological labels. They are retained
 for post hoc assessment and never added to the training layers.}
 }
 \value{
-An object of class \code{som_data}. The scalar \code{id_source} records
+An object of class \code{som_data}. Named multi-layer inputs are aligned
+to the first layer by row name when all layers provide row names;
+incompatible or partly named layers are rejected. An explicit \code{id} vector
+is always interpreted positionally against the first layer and never
+changes its row order. If no layers have usable row names, their existing
+row order is treated as authoritative. The scalar \code{id_source} records
 whether sample identifiers were supplied, taken from explicit
 non-positional row names or generated locally. Stable identifiers are
 required to compare different data-coverage scenarios.
 }
 \description{
 Construct a design-explicit SOM data object
+}
+\examples{
+x <- data.frame(temperature = 10:14, oxygen = c(9, 8, 8, 7, 6))
+data <- som_data(x, id = paste0("sample_", seq_len(nrow(x))))
+data
 }

@@ -35,8 +35,8 @@ jointly assigned in pairwise partition comparisons.}
 \item{min_cluster_jaccard}{Optional minimum across cluster-level median
 Jaccard values.}
 
-\item{min_consensus_coverage}{Optional minimum proportion of
-samples assigned by at least one partition.}
+\item{min_consensus_coverage}{Optional minimum proportion of samples with an
+identifiable consensus label.}
 
 \item{min_replicated_coverage}{Optional minimum proportion of
 samples assigned by at least two partitions, for which support and entropy
@@ -48,7 +48,9 @@ support.}
 \item{max_assignment_entropy}{Optional maximum median normalized assignment
 entropy.}
 
-\item{min_cross_model_ari}{Optional minimum median SOM-to-reference ARI.}
+\item{min_cross_model_ari}{Optional minimum of the method-specific median
+SOM-to-reference ARI values. Each requested reference method must have an
+evaluable result; pooled comparisons are not used for this gate.}
 
 \item{min_cross_model_methods}{Optional minimum number of reference methods
 represented in the comparison.}
@@ -61,4 +63,7 @@ A \code{som_gate} object.
 \description{
 No universal thresholds are supplied. A gate records the analyst's
 prespecified requirements.
+}
+\examples{
+som_gate(min_success_rate = 0.95, min_cluster_jaccard = 0.75)
 }

@@ -13,6 +13,10 @@
 #'   optional `assessment` row indices.
 #'
 #' @return A `som_resamples` object.
+#' @examples
+#' x <- matrix(seq_len(120), nrow = 30)
+#' data <- som_data(x, group = rep(paste0("site_", 1:10), each = 3))
+#' som_resamples(data, method = "group_subsample", repeats = 2, seed = 1)
 #' @export
 som_resamples <- function(data,
                           method = c(
@@ -24,9 +28,9 @@ som_resamples <- function(data,
   if (!inherits(data, "som_data")) .abort("`data` must come from `som_data()`.")
   method <- match.arg(method)
   n <- nrow(data$metadata)
-  .assert_scalar_number(repeats, "repeats", lower = 1)
+  .assert_scalar_integer(repeats, "repeats", lower = 1)
   .assert_scalar_number(prop, "prop", lower = .Machine$double.eps, upper = 1)
-  .assert_scalar_number(seed, "seed")
+  .assert_scalar_integer(seed, "seed", lower = 0)
 
   resolve_vector <- function(value, name) {
     if (is.character(value) && length(value) == 1L) {
@@ -42,6 +46,10 @@ som_resamples <- function(data,
   }
 
   make_split <- function(id, analysis, assessment = setdiff(seq_len(n), analysis)) {
+    if (!is.character(id) || length(id) != 1L || is.na(id) ||
+          !nzchar(trimws(id))) {
+      .abort("Every split `id` must be one non-empty character value.")
+    }
     analysis <- .validate_index(analysis, n, "analysis")
     assessment <- .validate_index(assessment, n, "assessment")
     if (!length(analysis)) .abort("Every split needs at least one analysis row.")
@@ -74,11 +82,16 @@ som_resamples <- function(data,
     if (length(domains) < 2L) .abort("Leave-domain-out requires at least two domains.")
     out <- lapply(seq_along(domains), function(i) {
       held <- domains[[i]]
-      make_split(
-        sprintf("leave_domain_%s", make.names(as.character(held))),
+      split <- make_split(
+        sprintf(
+          "leave_domain_%03d_%s", i,
+          make.names(as.character(held), unique = FALSE)
+        ),
         which(domain_values != held),
         which(domain_values == held)
       )
+      split$held_domain <- held
+      split
     })
   } else {
     out <- .with_reproducible_seed(as.integer(seed), {
@@ -101,8 +114,19 @@ som_resamples <- function(data,
     })
   }
 
+  split_ids <- vapply(out, `[[`, character(1), "id")
+  if (anyDuplicated(split_ids)) {
+    .abort("Every resampling split must have a unique `id`.")
+  }
+
   structure(
-    list(method = method, splits = out, seed = as.integer(seed), n = n),
+    list(
+      method = method,
+      splits = out,
+      seed = as.integer(seed),
+      n = n,
+      sample_ids = as.character(data$metadata$id)
+    ),
     class = "som_resamples"
   )
 }

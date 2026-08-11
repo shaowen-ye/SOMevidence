@@ -32,6 +32,14 @@
 #'
 #' @return A `som_newdata_mapping` object with sample-by-fit records, fit-level
 #'   distance and occupancy summaries, failures and new-data metadata.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 8)
+#' specification <- som_spec(c(3, 2), seeds = 1, rlen = 10, k = 2)
+#' ensemble <- fit_som_ensemble(data, specification, keep_models = TRUE)
+#' new_data <- som_data(layers = list(
+#'   environment = data$layers$environment[1:3, , drop = FALSE]
+#' ))
+#' map_som_ensemble(ensemble, new_data)
 #' @export
 map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
   if (!inherits(ensemble, "som_ensemble")) {
@@ -49,7 +57,7 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
   }
 
   mapped <- lapply(successful, function(fit) {
-    result <- tryCatch({
+    captured <- .capture_warnings({
       processed <- lapply(names(new_layers), function(nm) {
         .apply_preprocessor(new_layers[[nm]], fit$fitted_preprocess[[nm]])
       })
@@ -64,8 +72,6 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
       training_median <- stats::median(fit$distances[fit$analysis], na.rm = TRUE)
       new_median <- stats::median(mapping$distances, na.rm = TRUE)
       list(
-        success = TRUE,
-        fit = fit,
         bmu = mapping$unit.classif,
         distances = mapping$distances,
         training_median = training_median,
@@ -79,11 +85,20 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
           mapping$unit.classif, training_units
         )
       )
-    }, error = function(error) {
-      if (fail_fast) stop(error)
-      list(success = FALSE, fit = fit, error = conditionMessage(error))
     })
-    result
+    if (inherits(captured$value, "error")) {
+      if (fail_fast) stop(captured$value)
+      list(
+        success = FALSE, fit = fit,
+        error = conditionMessage(captured$value),
+        warnings = captured$warnings
+      )
+    } else {
+      c(
+        list(success = TRUE, fit = fit, warnings = captured$warnings),
+        captured$value
+      )
+    }
   })
 
   successful_maps <- Filter(function(result) isTRUE(result$success), mapped)
@@ -109,13 +124,15 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
   }
   summary <- if (length(successful_maps)) {
     do.call(rbind, lapply(successful_maps, function(result) {
+      mapped_rows <- !is.na(result$bmu) & is.finite(result$distances)
       data.frame(
         fit_id = result$fit$id,
         grid_id = result$fit$grid_id,
         xdim = result$fit$xdim,
         ydim = result$fit$ydim,
         n_new = length(result$bmu),
-        n_mapped = sum(!is.na(result$bmu)),
+        n_mapped = sum(mapped_rows),
+        mapping_coverage = mean(mapped_rows),
         median_training_distance = result$training_median,
         median_new_distance = result$new_median,
         distance_ratio = result$distance_ratio,
@@ -127,6 +144,7 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
     data.frame(
       fit_id = character(), grid_id = integer(), xdim = integer(),
       ydim = integer(), n_new = integer(), n_mapped = integer(),
+      mapping_coverage = numeric(),
       median_training_distance = numeric(), median_new_distance = numeric(),
       distance_ratio = numeric(), unoccupied_unit_rate = numeric(),
       stringsAsFactors = FALSE
@@ -144,12 +162,27 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
   } else {
     data.frame(fit_id = character(), error = character())
   }
+  warning_rows <- Filter(function(result) nrow(result$warnings) > 0L, mapped)
+  warnings <- if (length(warning_rows)) {
+    do.call(rbind, lapply(warning_rows, function(result) {
+      cbind(
+        data.frame(fit_id = result$fit$id, stringsAsFactors = FALSE),
+        result$warnings
+      )
+    }))
+  } else {
+    data.frame(
+      fit_id = character(), warning_class = character(),
+      warning = character(), stringsAsFactors = FALSE
+    )
+  }
 
   structure(
     list(
       records = records,
       summary = summary,
       failures = failures,
+      warnings = warnings,
       metadata = new_data$metadata,
       n_expected_fits = length(successful)
     ),
@@ -164,6 +197,7 @@ print.som_newdata_mapping <- function(x, ...) {
   cat("  fits attempted :", x$n_expected_fits, "\n")
   cat("  fits mapped    :", nrow(x$summary), "\n")
   cat("  fits failed    :", nrow(x$failures), "\n")
+  cat("  warnings       :", nrow(x$warnings %||% data.frame()), "\n")
   cat("  node consensus : not computed across grids\n")
   invisible(x)
 }

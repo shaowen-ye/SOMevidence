@@ -12,9 +12,14 @@ test_that("preprocessing parameters are learned from analysis rows only", {
   fitted <- e$fits[[1]]$fitted_preprocess$data
   expect_equal(unname(fitted$means), unname(colMeans(x[1:5, , drop = FALSE])))
   expect_false(isTRUE(all.equal(unname(fitted$means), colMeans(x))))
+  processed_training <- SOMevidence:::.apply_preprocessor(
+    x[1:5, , drop = FALSE], fitted
+  )
   expect_true(all(abs(colMeans(
-    e$fits[[1]]$processed_all$data[1:5, , drop = FALSE]
+    processed_training
   )) < 1e-12))
+  expect_null(e$fits[[1]]$processed_all)
+  expect_true(is.finite(e$fits[[1]]$training_topographic_error))
 })
 
 test_that("compositional transforms require explicit valid inputs", {

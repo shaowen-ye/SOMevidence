@@ -8,15 +8,24 @@
 #' @param time Optional time values retained as metadata.
 #' @param domain Optional monitoring-domain identifiers.
 #' @param weight Optional non-negative survey or summary weights. These weights
-#'   are retained for design summaries and are not silently used as SOM
-#'   training weights.
+#'   are retained only as metadata in the current release. They are not used
+#'   in SOM training, evidence metrics or design summaries.
 #' @param external_label Optional external ecological labels. They are retained
 #'   for post hoc assessment and never added to the training layers.
 #'
-#' @return An object of class `som_data`. The scalar `id_source` records
+#' @return An object of class `som_data`. Named multi-layer inputs are aligned
+#'   to the first layer by row name when all layers provide row names;
+#'   incompatible or partly named layers are rejected. An explicit `id` vector
+#'   is always interpreted positionally against the first layer and never
+#'   changes its row order. If no layers have usable row names, their existing
+#'   row order is treated as authoritative. The scalar `id_source` records
 #'   whether sample identifiers were supplied, taken from explicit
 #'   non-positional row names or generated locally. Stable identifiers are
 #'   required to compare different data-coverage scenarios.
+#' @examples
+#' x <- data.frame(temperature = 10:14, oxygen = c(9, 8, 8, 7, 6))
+#' data <- som_data(x, id = paste0("sample_", seq_len(nrow(x))))
+#' data
 #' @export
 som_data <- function(x = NULL, layers = NULL, id = NULL, group = NULL,
                      time = NULL, domain = NULL, weight = NULL,
@@ -36,17 +45,25 @@ som_data <- function(x = NULL, layers = NULL, id = NULL, group = NULL,
     .abort("Every layer must have a unique, non-empty name.")
   }
 
-  source_layer <- layers[[1L]]
-  rectangular_source <- is.matrix(source_layer) || is.data.frame(source_layer)
-  source_rownames <- if (rectangular_source) rownames(source_layer) else NULL
-  positional_rownames <- rectangular_source && identical(
-    as.character(source_rownames), as.character(seq_len(nrow(source_layer)))
-  )
-  generated_rownames <- !is.null(source_rownames) && length(source_rownames) &&
-    any(grepl("^(sample|simulation)_[0-9]+$", source_rownames))
-  has_stable_rownames <- !is.null(source_rownames) && !(
-    is.data.frame(source_layer) && .row_names_info(source_layer, type = 1L) < 0L
-  ) && !positional_rownames && !generated_rownames
+  row_identity <- lapply(layers, function(layer) {
+    rectangular <- is.matrix(layer) || is.data.frame(layer)
+    rn <- if (rectangular) rownames(layer) else NULL
+    positional <- rectangular && identical(
+      as.character(rn), as.character(seq_len(nrow(layer)))
+    )
+    generated <- !is.null(rn) && length(rn) &&
+      any(grepl("^(sample|simulation)_[0-9]+$", rn))
+    automatic <- rectangular && is.data.frame(layer) &&
+      .row_names_info(layer, type = 1L) < 0L
+    comparable <- !is.null(rn) && !automatic && !positional
+    informative <- comparable && !generated
+    list(
+      names = as.character(rn), comparable = comparable,
+      informative = informative
+    )
+  })
+  source_rownames <- row_identity[[1L]]$names
+  has_stable_rownames <- isTRUE(row_identity[[1L]]$informative)
   if (is.null(id)) {
     if (has_stable_rownames) {
       id <- source_rownames
@@ -77,10 +94,41 @@ som_data <- function(x = NULL, layers = NULL, id = NULL, group = NULL,
   }
 
   id <- id %||% sprintf("sample_%05d", seq_len(n))
-  if (length(id) != n || anyNA(id) || anyDuplicated(id)) {
-    .abort("`id` must contain one unique, non-missing value per row.")
+  if (length(id) != n || anyNA(id) || anyDuplicated(id) ||
+        any(!nzchar(trimws(as.character(id))))) {
+    .abort("`id` must contain one unique, non-empty value per row.")
   }
   id <- as.character(id)
+
+  comparable <- vapply(row_identity, `[[`, logical(1), "comparable")
+  if (length(layers) > 1L && any(comparable) && !all(comparable)) {
+    .abort(paste0(
+      "Multi-layer row identity is ambiguous: either every layer must have ",
+      "unique sample row names or none may rely on row names."
+    ))
+  }
+  if (length(layers) > 1L && all(comparable)) {
+    alignment_ids <- row_identity[[1L]]$names
+    for (i in seq_along(layers)) {
+      row_ids <- row_identity[[i]]$names
+      if (length(row_ids) != n || anyNA(row_ids) || any(!nzchar(row_ids)) ||
+            anyDuplicated(row_ids)) {
+        .abort(sprintf(
+          "Layer `%s` must have unique, non-empty sample row names.",
+          names(layers)[[i]]
+        ))
+      }
+      if (!setequal(row_ids, alignment_ids)) {
+        .abort(sprintf(
+          "Layer `%s` row names do not match the other layer sample IDs.",
+          names(layers)[[i]]
+        ))
+      }
+      layers[[i]] <- layers[[i]][
+        match(alignment_ids, row_ids), , drop = FALSE
+      ]
+    }
+  }
   for (i in seq_along(layers)) rownames(layers[[i]]) <- id
 
   check_length <- function(value, name) {
@@ -96,7 +144,8 @@ som_data <- function(x = NULL, layers = NULL, id = NULL, group = NULL,
   external_label <- check_length(external_label, "external_label")
 
   if (!is.null(weight) &&
-        (!is.numeric(weight) || anyNA(weight) || any(weight < 0))) {
+        (!is.numeric(weight) || anyNA(weight) || any(!is.finite(weight)) ||
+           any(weight < 0))) {
     .abort("`weight` must be numeric, non-missing and non-negative.")
   }
 

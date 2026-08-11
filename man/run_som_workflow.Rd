@@ -10,13 +10,14 @@ run_som_workflow(
   resamples = NULL,
   preprocess = som_preprocess(),
   k = spec$k,
-  cross_models = c("kmeans", "ward", "gmm"),
+  cross_models = c("kmeans", "ward"),
   cross_model_control = list(),
   consensus_method = "auto",
   max_coassignment_n = 5000L,
   keep_models = FALSE,
   fail_fast = FALSE,
-  parallel = FALSE
+  parallel = FALSE,
+  max_pairwise_comparisons = 1000000L
 )
 }
 \arguments{
@@ -24,7 +25,9 @@ run_som_workflow(
 
 \item{spec}{A \code{som_spec} object.}
 
-\item{resamples}{Optional \code{som_resamples} object.}
+\item{resamples}{Optional \code{som_resamples} object. If \code{NULL}, a single
+full-data split is used; that run does not assess perturbation under
+resampling.}
 
 \item{preprocess}{One \code{som_preprocess} object or a named object per layer.}
 
@@ -34,7 +37,8 @@ run_som_workflow(
 \code{\link[=fit_cross_models]{fit_cross_models()}}. Use \code{character()} to skip cross-model fitting.}
 
 \item{cross_model_control}{Named list of optional \code{kmeans_seeds},
-\code{kmeans_nstart}, \code{kmeans_iter_max} or \code{gmm_model_names} settings forwarded
+\code{kmeans_nstart}, \code{kmeans_iter_max}, \code{gmm_model_names} or \code{gmm_seed}
+settings forwarded
 to \code{\link[=fit_cross_models]{fit_cross_models()}}. Methods, candidate \code{k}, model retention and
 failure policy remain controlled by this workflow.}
 
@@ -49,6 +53,9 @@ failure policy remain controlled by this workflow.}
 
 \item{parallel}{Whether SOM ensemble members should use the current
 \code{future} plan; passed to \code{\link[=fit_som_ensemble]{fit_som_ensemble()}}.}
+
+\item{max_pairwise_comparisons}{Pairwise partition-comparison budget passed
+to \code{\link[=partition_som]{partition_som()}}.}
 }
 \value{
 A \code{som_workflow} object containing each evidence stream and explicit
@@ -58,4 +65,12 @@ failure logs.
 The workflow preserves representation quality, partition stability,
 sample-level consensus and cross-model agreement as separate evidence
 streams. It does not combine them into a score or select a winning \code{k}.
+}
+\examples{
+data <- simulate_som_scenario("clusters", n = 60, p = 4, seed = 6)
+specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2:3)
+workflow <- run_som_workflow(
+  data, specification, cross_models = c("kmeans", "ward")
+)
+summary(workflow)
 }

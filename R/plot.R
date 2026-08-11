@@ -252,7 +252,9 @@ plot.som_partitions <- function(x, ...) {
 #' Plot sample-level consensus evidence
 #'
 #' @param x A `som_consensus` object.
-#' @param type Either `"support"` or `"heatmap"`.
+#' @param type Either `"support"` or `"heatmap"`. A heatmap requires a
+#'   co-assignment consensus; aligned voting does not create a dense
+#'   co-assignment matrix.
 #' @param samples Optional sample indices for a heatmap.
 #' @param max_samples Maximum heatmap size allowed without explicit `samples`.
 #' @param ... Unused.

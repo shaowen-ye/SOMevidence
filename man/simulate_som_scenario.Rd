@@ -70,8 +70,14 @@ Simulate known-structure data for SOM validation
 }
 \section{Lifecycle}{
 
-Experimental. Existing scenario names are retained during candidate v0.1
-testing, but the simulation catalogue and scenario-specific controls may
-expand before the first stable release.
+Experimental. Existing scenario names are retained within the 1.x series,
+while new scenarios and scenario-specific controls may be added in minor
+releases.
 }
 
+\examples{
+simulated <- simulate_som_scenario(
+  "gradient", n = 60, p = 4, seed = 1, domain_shift = 0.5
+)
+simulated
+}

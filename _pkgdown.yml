@@ -1,10 +1,20 @@
+url: https://shaowen-ye.github.io/SOMevidence/
+
 template:
   bootstrap: 5
 
+development:
+  mode: auto
+
 navbar:
   structure:
-    left: [intro, articles, reference]
-    right: [search]
+    left: [intro, articles, reference, news]
+    right: [search, github]
+  components:
+    github:
+      icon: fab fa-github
+      href: https://github.com/shaowen-ye/SOMevidence
+      aria-label: GitHub repository
 
 articles:
   - title: Core workflow
@@ -13,6 +23,9 @@ articles:
       - api-lifecycle
       - design-aware-resampling
       - visualizing-evidence
+  - title: Applied tutorials
+    contents:
+      - palmer-penguins
 
 reference:
   - title: Data, preprocessing and design
@@ -53,9 +66,15 @@ reference:
   - title: Complete workflows
     contents:
       - run_som_workflow
+      - summary.som_workflow
       - run_som_sensitivity
   - title: Teaching, examples and interface
     contents:
       - simulate_som_scenario
       - open_data_registry
       - launch_som_app
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with

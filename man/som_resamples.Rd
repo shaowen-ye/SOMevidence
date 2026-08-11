@@ -42,3 +42,8 @@ A \code{som_resamples} object.
 \description{
 Construct design-aware resamples
 }
+\examples{
+x <- matrix(seq_len(120), nrow = 30)
+data <- som_data(x, group = rep(paste0("site_", 1:10), each = 3))
+som_resamples(data, method = "group_subsample", repeats = 2, seed = 1)
+}

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage and support guidance
+    url: https://github.com/shaowen-ye/SOMevidence/blob/main/SUPPORT.md
+    about: Read the support scope before opening an issue.

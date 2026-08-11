@@ -39,4 +39,12 @@ A \code{som_ensemble} object.
 \description{
 Every model receives preprocessing parameters estimated only from its own
 analysis rows. Failures are recorded instead of silently discarded.
+Topographic error is computed during fitting so duplicate full processed
+matrices need not be retained in every ensemble member.
+}
+\examples{
+data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 1)
+specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+ensemble
 }

@@ -15,3 +15,8 @@ A \code{som_audit} object containing fit-level metrics and summaries.
 \description{
 Audit representation quality across a SOM ensemble
 }
+\examples{
+data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 1)
+specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+audit_som(fit_som_ensemble(data, specification, keep_models = FALSE))
+}

@@ -5,6 +5,7 @@ bibentry(
   title = "SOMevidence: Evidence Workflows for Self-Organizing Map Classification",
   author = person("Shaowen", "Ye"),
   year = "2026",
+  url = "https://github.com/shaowen-ye/SOMevidence",
   note = sprintf("R package version %s", meta$Version),
   textVersion = paste0(
     "Ye, S. (2026). SOMevidence: Evidence Workflows for Self-Organizing Map ",

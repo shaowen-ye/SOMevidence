@@ -6,10 +6,11 @@
 \usage{
 run_som_sensitivity(
   scenarios,
-  cross_models = c("kmeans", "ward", "gmm"),
+  cross_models = c("kmeans", "ward"),
   cross_model_control = list(),
   consensus_method = "auto",
   max_coassignment_n = 5000L,
+  max_pairwise_comparisons = 1000000L,
   sample_profiles = TRUE,
   keep_workflows = TRUE,
   fail_fast = FALSE
@@ -26,6 +27,9 @@ scenario through \code{\link[=run_som_workflow]{run_som_workflow()}}.}
 \item{consensus_method}{Consensus method used in every scenario.}
 
 \item{max_coassignment_n}{Dense co-assignment limit.}
+
+\item{max_pairwise_comparisons}{Pairwise partition-comparison budget passed
+to each scenario.}
 
 \item{sample_profiles}{Whether to compute sample-level membership-set
 contrasts. Set to \code{FALSE} when the number of scenarios and samples would

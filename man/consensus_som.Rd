@@ -29,13 +29,26 @@ dense co-assignment matrix. Set this deliberately because memory grows
 quadratically with sample count.}
 }
 \value{
-A \code{som_consensus} object containing the co-assignment matrix,
-aligned assignments, assignment and replicated-assignment coverage,
-membership support, assignment entropy and clusterwise Jaccard values.
+A \code{som_consensus} object containing aligned assignments,
+partition-assignment, consensus-label and replicated
+coverage, membership support, assignment entropy and clusterwise Jaccard
+values. The object also records whether the consensus itself retains all
+requested clusters. For co-assignment consensus, \code{coassignment} and \code{tree}
+contain the dense matrix and its hierarchical clustering; both are \code{NULL}
+for aligned voting. Aligned voting avoids quadratic growth in sample
+count, but
+alignment and upstream partition auditing can still grow quadratically in
+the number of ensemble members.
 }
 \description{
 Partitions with the same \code{k} are compared through sample co-assignment.
 Labels are aligned to the consensus partition only after fitting. This label
 alignment does not align SOM nodes and must not be used to force maps with
 different grids into a common node geometry.
+}
+\examples{
+data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 3)
+specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+consensus_som(partition_som(ensemble), k = 2)
 }

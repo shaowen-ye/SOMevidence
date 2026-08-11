@@ -29,10 +29,24 @@ test_that("GUI export is parseable and records the analysis choices", {
   expect_error(parse(text = script), NA)
   expect_true(any(grepl("group_subsample", script, fixed = TRUE)))
   expect_true(any(grepl("monitoring.csv", script, fixed = TRUE)))
+  expect_true(any(grepl("file.path(\"data\"", script, fixed = TRUE)))
+  expect_true(any(grepl("file.exists(input_path)", script, fixed = TRUE)))
+  expect_true(any(grepl("read.csv(input_path", script, fixed = TRUE)))
   expect_true(any(grepl("cross_models", script, fixed = TRUE)))
   expect_true(any(grepl("time = raw[[\"date\"]]", script, fixed = TRUE)))
-  expect_true(any(grepl("weight = raw[[\"survey_weight\"]]", script, fixed = TRUE)))
+  expect_true(any(grepl(
+    "weight = raw[[\"survey_weight\"]]", script, fixed = TRUE
+  )))
   expect_true(any(grepl("required_SOMevidence_version", script, fixed = TRUE)))
+
+  full_config <- config
+  full_config$resample_method <- "full"
+  full_script <- SOMevidence:::.render_gui_script(full_config)
+  resample_line <- full_script[
+    grepl("som_resamples", full_script, fixed = TRUE)
+  ]
+  expect_false(grepl("repeats", resample_line, fixed = TRUE))
+  expect_false(grepl("prop", resample_line, fixed = TRUE))
 })
 
 test_that("GUI integer inputs reject coercion and truncation", {
@@ -116,6 +130,104 @@ test_that("GUI configuration keeps metadata outside training predictors", {
     )),
     "temperature"
   )
+
+  predictor_data <- data.frame(sample_id = letters[1:3], x = 1:3, y = 4:6)
+  expect_identical(
+    SOMevidence:::.gui_predictor_defaults(predictor_data, "built_in"),
+    c("x", "y")
+  )
+  expect_identical(
+    SOMevidence:::.gui_predictor_defaults(predictor_data, "upload"),
+    character()
+  )
+})
+
+test_that("GUI data audit and preflight expose risky inputs before fitting", {
+  raw <- data.frame(
+    sample_id = sprintf("s%02d", 1:12),
+    site = rep(letters[1:3], each = 4),
+    x = c(NA, seq_len(11)),
+    y = rep(2, 12),
+    z = seq(0.1, 1.2, length.out = 12)
+  )
+  audit <- SOMevidence:::.gui_data_audit(raw, c("x", "y", "z"))
+  missing_status <- audit$Status[
+    audit$Check == "Rows with missing predictor values"
+  ]
+  expect_identical(
+    missing_status,
+    "Review"
+  )
+  expect_identical(audit$Result[audit$Check == "Constant predictors"], "y")
+
+  config <- list(
+    predictors = c("x", "y", "z"),
+    id_column = "sample_id",
+    group_column = "site",
+    time_column = NULL,
+    domain_column = NULL,
+    weight_column = NULL,
+    external_column = NULL,
+    transform = "identity",
+    center = TRUE,
+    scale = TRUE,
+    zero_replacement = NULL,
+    resample_method = "group_subsample",
+    repeats = 2L,
+    prop = 0.67,
+    resample_seed = 1L,
+    xdim = 3L,
+    ydim = 2L,
+    seeds = 1:2,
+    rlen = 10L,
+    k = 2L,
+    cross_models = "ward"
+  )
+  prepared <- SOMevidence:::.prepare_gui_analysis(config, raw)
+  expect_s3_class(prepared$data, "som_data")
+  expect_s3_class(prepared$resamples, "som_resamples")
+  expect_equal(prepared$model_budget, 4L)
+  expect_match(paste(prepared$notes, collapse = " "), "Missing predictors")
+  expect_match(paste(prepared$notes, collapse = " "), "Constant predictors")
+
+  raw$x[[2L]] <- Inf
+  expect_error(
+    SOMevidence:::.prepare_gui_analysis(config, raw),
+    "infinite"
+  )
+})
+
+test_that("GUI diagnostics report every failure and warning stream", {
+  workflow <- list(
+    ensemble = list(
+      fits = list(list(success = TRUE), list(success = FALSE)),
+      expected_models = 2L,
+      failures = data.frame(error = "SOM failed"),
+      warnings = data.frame(warning = "SOM warning")
+    ),
+    consensus = list(k2 = list()),
+    consensus_failures = data.frame(error = "Consensus failed"),
+    cross_models = list(
+      records = list(list()),
+      failures = data.frame(error = "Reference failed"),
+      warnings = data.frame(warning = "Reference warning")
+    )
+  )
+  diagnostics <- SOMevidence:::.gui_workflow_diagnostics(workflow)
+  expect_equal(sum(diagnostics$Count), 5L)
+  expect_true(all(c("SOM ensemble", "Consensus", "Cross-model references") %in%
+      diagnostics$Stream
+  ))
+  status <- SOMevidence:::.gui_workflow_status(workflow)
+  expect_match(status, "1/2 succeeded")
+  expect_match(status, "1 failed; 1 warnings")
+
+  labelled <- SOMevidence:::.gui_table_labels(data.frame(
+    k = 2L, median_ari = 0.5, ari_q025 = 0.2
+  ))
+  expect_identical(names(labelled), c("k", "Median ARI", "ARI 2.5%"))
+  choices <- SOMevidence:::.gui_consensus_choices(workflow)
+  expect_identical(choices, c("k = 2" = "k2"))
 })
 
 test_that("optional GUI constructs a Shiny application", {
@@ -160,5 +272,11 @@ test_that("GUI server runs a compact built-in reproducible workflow", {
     expect_identical(result$config$resample_method, "subsample")
     expect_identical(result$config$seeds, 1:2)
     expect_true(nrow(result$workflow$partitions$stability) > 0L)
+    expect_match(output$status, "SOM fits")
+    expect_match(output$preflight_status, "Preflight passed")
+    expect_match(output$diagnostics_table, "Failures")
+
+    session$setInputs(consensus_k = "k3")
+    expect_identical(input$consensus_k, "k3")
   })
 })

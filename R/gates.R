@@ -11,8 +11,8 @@
 #'   jointly assigned in pairwise partition comparisons.
 #' @param min_cluster_jaccard Optional minimum across cluster-level median
 #'   Jaccard values.
-#' @param min_consensus_coverage Optional minimum proportion of
-#'   samples assigned by at least one partition.
+#' @param min_consensus_coverage Optional minimum proportion of samples with an
+#'   identifiable consensus label.
 #' @param min_replicated_coverage Optional minimum proportion of
 #'   samples assigned by at least two partitions, for which support and entropy
 #'   are estimable.
@@ -20,12 +20,16 @@
 #'   support.
 #' @param max_assignment_entropy Optional maximum median normalized assignment
 #'   entropy.
-#' @param min_cross_model_ari Optional minimum median SOM-to-reference ARI.
+#' @param min_cross_model_ari Optional minimum of the method-specific median
+#'   SOM-to-reference ARI values. Each requested reference method must have an
+#'   evaluable result; pooled comparisons are not used for this gate.
 #' @param min_cross_model_methods Optional minimum number of reference methods
 #'   represented in the comparison.
 #' @param min_success_rate Optional minimum model-fit success rate.
 #'
 #' @return A `som_gate` object.
+#' @examples
+#' som_gate(min_success_rate = 0.95, min_cluster_jaccard = 0.75)
 #' @export
 som_gate <- function(max_topographic_error = NULL,
                      max_empty_unit_rate = NULL,
@@ -85,6 +89,11 @@ print.som_gate <- function(x, ...) {
 
 #' Assess partition defensibility without forcing a verdict
 #'
+#' In addition to analyst-defined thresholds, the assessment checks that every
+#' source partition and the consensus retain the requested `k`, and that all
+#' requested cross-model fits succeeded. Missing audit evidence produces an
+#' uncertain result rather than being treated as a pass.
+#'
 #' @param audit A `som_audit` object.
 #' @param partitions Optional `som_partitions` object.
 #' @param k Candidate number of clusters when partition stability is assessed.
@@ -98,6 +107,10 @@ print.som_gate <- function(x, ...) {
 assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL,
                                  consensus = NULL, cross_model = NULL) {
   if (!inherits(audit, "som_audit")) .abort("`audit` must come from `audit_som()`.")
+  if (!is.null(k)) {
+    .assert_scalar_integer(k, "k", lower = 2)
+    k <- as.integer(k)
+  }
   if (!is.null(partitions) && !inherits(partitions, "som_partitions")) {
     .abort("`partitions` must come from `partition_som()`.")
   }
@@ -136,6 +149,7 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
   median_ari <- NA_real_
   median_ami <- NA_real_
   median_pairwise_coverage <- NA_real_
+  complete_partition_rate <- NA_real_
   if (!is.null(partitions)) {
     if (is.null(k)) .abort("Supply `k` when partition evidence is included.")
     row <- partitions$stability[partitions$stability$k == k, , drop = FALSE]
@@ -145,18 +159,64 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
     median_ari <- row$median_ari
     median_ami <- row$median_ami
     median_pairwise_coverage <- row$median_joint_coverage
+    if (all(c(
+      "n_complete_partitions", "n_partitions"
+    ) %in% names(row))) {
+      complete_partition_rate <-
+        row$n_complete_partitions / row$n_partitions
+    } else {
+      candidate_records <- Filter(function(record) {
+        record$k == k
+      }, partitions$records)
+      if (length(candidate_records)) {
+        complete_partition_rate <- mean(vapply(
+          candidate_records,
+          function(record) {
+            length(unique(stats::na.omit(record$sample_labels))) == k
+          },
+          logical(1)
+        ))
+      }
+    }
+  } else if (!is.null(cross_model) &&
+               !is.null(cross_model$partition_completeness)) {
+    row <- cross_model$partition_completeness[
+      cross_model$partition_completeness$k == k, , drop = FALSE
+    ]
+    if (nrow(row) == 1L && all(c(
+      "n_complete_partitions", "n_partitions"
+    ) %in% names(row))) {
+      complete_partition_rate <-
+        row$n_complete_partitions / row$n_partitions
+    }
+  } else if (!is.null(consensus)) {
+    record_complete <- vapply(consensus$records, function(record) {
+      complete <- record$complete_k
+      if (is.null(complete)) {
+        complete <- length(unique(stats::na.omit(record$sample_labels))) == k
+      }
+      isTRUE(complete)
+    }, logical(1))
+    if (length(record_complete)) {
+      complete_partition_rate <- mean(record_complete)
+    }
   }
   min_cluster_jaccard <- median_membership_support <-
     median_assignment_entropy <- NA_real_
   consensus_assignment_coverage <- replicated_assignment_coverage <- NA_real_
+  consensus_cluster_count <- NA_real_
   if (!is.null(consensus)) {
     if (is.null(k) || consensus$k != k) {
       .abort("`consensus` and the requested `k` must agree.")
     }
-    min_cluster_jaccard <- min(
-      consensus$cluster_summary$median_jaccard,
-      na.rm = TRUE
-    )
+    cluster_jaccard <- consensus$cluster_summary$median_jaccard
+    min_cluster_jaccard <- if (
+      length(cluster_jaccard) && all(is.finite(cluster_jaccard))
+    ) {
+      min(cluster_jaccard)
+    } else {
+      NA_real_
+    }
     median_membership_support <- stats::median(
       consensus$membership_support,
       na.rm = TRUE
@@ -165,11 +225,15 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
       consensus$assignment_entropy,
       na.rm = TRUE
     )
-    consensus_assignment_coverage <- consensus$assignment_coverage
+    consensus_assignment_coverage <- consensus$consensus_label_coverage %||%
+      consensus$assignment_coverage
+    consensus_cluster_count <- consensus$n_consensus_clusters %||%
+      length(unique(stats::na.omit(consensus$consensus_labels)))
     replicated_assignment_coverage <-
       consensus$replicated_assignment_coverage
   }
-  cross_model_median_ari <- cross_model_methods <- NA_real_
+  cross_model_median_ari <- cross_model_pooled_median_ari <-
+    cross_model_methods <- cross_model_min_success_rate <- NA_real_
   if (!is.null(cross_model)) {
     if (is.null(k)) .abort("Supply `k` when cross-model evidence is included.")
     cross_rows <- cross_model$comparisons[
@@ -177,8 +241,44 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
       drop = FALSE
     ]
     if (nrow(cross_rows)) {
-      cross_model_median_ari <- stats::median(cross_rows$ari, na.rm = TRUE)
-      cross_model_methods <- length(unique(cross_rows$method))
+      finite_rows <- cross_rows[is.finite(cross_rows$ari), , drop = FALSE]
+      cross_model_pooled_median_ari <- if (nrow(finite_rows)) {
+        stats::median(finite_rows$ari)
+      } else {
+        NA_real_
+      }
+      method_medians <- vapply(
+        cross_model$methods %||% unique(cross_rows$method),
+        function(method) {
+          values <- finite_rows$ari[finite_rows$method == method]
+          if (length(values)) stats::median(values) else NA_real_
+        },
+        numeric(1)
+      )
+      cross_model_median_ari <- if (
+        length(method_medians) && all(is.finite(method_medians))
+      ) {
+        min(method_medians)
+      } else {
+        NA_real_
+      }
+      cross_model_methods <- sum(is.finite(method_medians))
+    }
+    if (!is.null(cross_model$reference_status)) {
+      status_rows <- cross_model$reference_status[
+        cross_model$reference_status$k == k, , drop = FALSE
+      ]
+      method_rates <- vapply(
+        cross_model$methods,
+        function(method) {
+          values <- status_rows$success_rate[status_rows$method == method]
+          if (length(values) == 1L) values else NA_real_
+        },
+        numeric(1)
+      )
+      if (length(method_rates) && all(is.finite(method_rates))) {
+        cross_model_min_success_rate <- min(method_rates)
+      }
     }
   }
   evidence <- c(
@@ -193,13 +293,17 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
     median_ari = median_ari,
     median_ami = median_ami,
     median_pairwise_coverage = median_pairwise_coverage,
+    complete_partition_rate = complete_partition_rate,
     min_cluster_jaccard = min_cluster_jaccard,
     consensus_assignment_coverage = consensus_assignment_coverage,
+    consensus_cluster_count = consensus_cluster_count,
     replicated_assignment_coverage = replicated_assignment_coverage,
     median_membership_support = median_membership_support,
     median_assignment_entropy = median_assignment_entropy,
     cross_model_median_ari = cross_model_median_ari,
+    cross_model_pooled_median_ari = cross_model_pooled_median_ari,
     cross_model_methods = cross_model_methods,
+    cross_model_min_success_rate = cross_model_min_success_rate,
     success_rate = audit$success_rate
   )
 
@@ -245,6 +349,56 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
         passed = passed, stringsAsFactors = FALSE
       )
     }))
+    has_partition_evidence <- !is.null(partitions) || !is.null(consensus) ||
+      !is.null(cross_model)
+    if (has_partition_evidence) {
+      checks <- rbind(
+        data.frame(
+          requirement = "all_partitions_observe_k",
+          observed = complete_partition_rate,
+          threshold = 1,
+          passed = if (is.finite(complete_partition_rate)) {
+            complete_partition_rate == 1
+          } else {
+            NA
+          },
+          stringsAsFactors = FALSE
+        ),
+        checks
+      )
+    }
+    if (!is.null(consensus)) {
+      checks <- rbind(
+        data.frame(
+          requirement = "consensus_observes_k",
+          observed = consensus_cluster_count,
+          threshold = k,
+          passed = if (is.finite(consensus_cluster_count)) {
+            consensus_cluster_count == k
+          } else {
+            NA
+          },
+          stringsAsFactors = FALSE
+        ),
+        checks
+      )
+    }
+    if (!is.null(cross_model)) {
+      checks <- rbind(
+        data.frame(
+          requirement = "all_cross_model_fits_succeeded",
+          observed = cross_model_min_success_rate,
+          threshold = 1,
+          passed = if (is.finite(cross_model_min_success_rate)) {
+            cross_model_min_success_rate == 1
+          } else {
+            NA
+          },
+          stringsAsFactors = FALSE
+        ),
+        checks
+      )
+    }
     status <- if (any(checks$passed %in% FALSE)) {
       "abstain"
     } else if (anyNA(checks$passed)) {

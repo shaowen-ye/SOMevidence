@@ -21,9 +21,18 @@ scope is the default for hard-partition defensibility; assessment scope is
 a separate mapping-transfer diagnostic.}
 }
 \value{
-A \code{som_cross_comparison} containing ARI and AMI effect sizes and
-summaries. Neither metric is reported as accuracy.
+A \code{som_cross_comparison} containing ARI and AMI effect sizes,
+summaries, reference-fit success rates and source-partition completeness.
+Neither agreement metric is reported as accuracy.
 }
 \description{
 Compare SOM partitions with controlled cross-model references
+}
+\examples{
+data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 5)
+specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+partitions <- partition_som(ensemble)
+references <- fit_cross_models(ensemble, methods = "ward")
+compare_cross_models(partitions, references)
 }

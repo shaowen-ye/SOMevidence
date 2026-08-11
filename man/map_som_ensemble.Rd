@@ -24,3 +24,12 @@ and layer geometry learned from its own analysis split. The function reports
 best-matching units and mapping distances separately by fit; it does not
 align nodes across different grids or call the result prediction accuracy.
 }
+\examples{
+data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 8)
+specification <- som_spec(c(3, 2), seeds = 1, rlen = 10, k = 2)
+ensemble <- fit_som_ensemble(data, specification, keep_models = TRUE)
+new_data <- som_data(layers = list(
+  environment = data$layers$environment[1:3, , drop = FALSE]
+))
+map_som_ensemble(ensemble, new_data)
+}

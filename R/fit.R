@@ -81,7 +81,7 @@
   codes <- model$codes
   if (is.null(names(codes))) names(codes) <- names(training_layers)
 
-  list(
+  result <- list(
     success = TRUE,
     analysis = analysis,
     fitted_preprocess = fitted_preprocess,
@@ -101,12 +101,17 @@
     effective_layer_weights = layer_weighting$effective,
     whatmap = model$whatmap
   )
+  result$training_topographic_error <- .topographic_error(result, analysis)
+  result$processed_all <- NULL
+  result
 }
 
 #' Fit a reproducible ensemble of self-organizing maps
 #'
 #' Every model receives preprocessing parameters estimated only from its own
 #' analysis rows. Failures are recorded instead of silently discarded.
+#' Topographic error is computed during fitting so duplicate full processed
+#' matrices need not be retained in every ensemble member.
 #'
 #' @param data A `som_data` object.
 #' @param spec A `som_spec` object.
@@ -121,6 +126,11 @@
 #'   unless nested parallelism is intended.
 #'
 #' @return A `som_ensemble` object.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 1)
+#' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+#' ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+#' ensemble
 #' @export
 fit_som_ensemble <- function(data, spec, resamples = NULL,
                              preprocess = som_preprocess(),
@@ -139,6 +149,20 @@ fit_som_ensemble <- function(data, spec, resamples = NULL,
   if (!inherits(resamples, "som_resamples") ||
         resamples$n != nrow(data$metadata)) {
     .abort("`resamples` must describe the rows in `data`.")
+  }
+  if (is.null(resamples$sample_ids)) {
+    .abort(paste0(
+      "This legacy `som_resamples` object has no sample identity record. ",
+      "Recreate it with `som_resamples()` before fitting."
+    ))
+  } else if (!identical(
+    as.character(resamples$sample_ids),
+    as.character(data$metadata$id)
+  )) {
+    .abort(paste0(
+      "`resamples` were created for different sample IDs or row order. ",
+      "Recreate them from the current `som_data` object."
+    ))
   }
   preprocess <- .normalise_preprocess(preprocess, names(data$layers))
   budget <- expand_som_spec(spec)

@@ -56,6 +56,6 @@ test_that("SOM and reference objects always expose warning audit tables", {
       k = 2,
       kmeans_iter_max = 2.5
     ),
-    "must be integers"
+    "must be an integer"
   )
 })

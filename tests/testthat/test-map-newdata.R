@@ -19,10 +19,38 @@ test_that("new observations map through every retained ensemble member", {
   expect_equal(nrow(mapped$summary), 2L)
   expect_equal(nrow(mapped$records), 30L)
   expect_equal(nrow(mapped$failures), 0L)
+  expect_equal(nrow(mapped$warnings), 0L)
   expect_setequal(unique(mapped$records$sample_id), new_data$metadata$id)
   expect_true(all(is.finite(mapped$summary$distance_ratio)))
+  expect_true(all(mapped$summary$mapping_coverage == 1))
   expect_true(all(mapped$summary$unoccupied_unit_rate >= 0 &
                     mapped$summary$unoccupied_unit_rate <= 1))
+})
+
+test_that("new-data transformation failures remain structured", {
+  training_matrix <- matrix(
+    seq(1, 240) / 10, nrow = 60,
+    dimnames = list(NULL, paste0("x", 1:4))
+  )
+  training <- som_data(training_matrix)
+  ensemble <- fit_som_ensemble(
+    training,
+    som_spec(c(3, 2), seeds = 1008, rlen = 10, k = 2),
+    preprocess = som_preprocess(transform = "log")
+  )
+  new_matrix <- training_matrix[1:2, , drop = FALSE]
+  new_matrix[[1L]] <- -1
+  new_data <- som_data(new_matrix, id = c("invalid_1", "invalid_2"))
+  mapped <- map_som_ensemble(ensemble, new_data)
+
+  expect_equal(nrow(mapped$summary), 0L)
+  expect_equal(nrow(mapped$failures), 1L)
+  expect_match(mapped$failures$error, "requires positive values")
+  expect_named(
+    mapped$warnings,
+    c("fit_id", "warning_class", "warning")
+  )
+  expect_output(print(mapped), "warnings")
 })
 
 test_that("one new observation and reordered variables are supported", {

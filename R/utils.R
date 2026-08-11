@@ -51,7 +51,7 @@
 }
 
 .assert_scalar_number <- function(x, name, lower = -Inf, upper = Inf) {
-  if (!is.numeric(x) || length(x) != 1L || is.na(x) ||
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) || !is.finite(x) ||
         x < lower || x > upper) {
     .abort(sprintf(
       "`%s` must be one number in [%s, %s].",
@@ -59,6 +59,41 @@
     ))
   }
   invisible(x)
+}
+
+.assert_scalar_integer <- function(x, name, lower = -.Machine$integer.max,
+                                   upper = .Machine$integer.max) {
+  .assert_scalar_number(x, name, lower = lower, upper = upper)
+  if (x %% 1 != 0) {
+    .abort(sprintf("`%s` must be an integer.", name))
+  }
+  invisible(x)
+}
+
+.assert_integer_vector <- function(x, name, lower = -.Machine$integer.max,
+                                   upper = .Machine$integer.max,
+                                   allow_empty = FALSE) {
+  if (!is.numeric(x) || (!allow_empty && !length(x)) || anyNA(x) ||
+        any(!is.finite(x)) || any(x %% 1 != 0) ||
+        any(x < lower | x > upper)) {
+    qualifier <- if (allow_empty) "zero or more" else "one or more"
+    .abort(sprintf(
+      "`%s` must contain %s integers in [%s, %s].",
+      name, qualifier, format(lower), format(upper)
+    ))
+  }
+  invisible(x)
+}
+
+.seed_from_key <- function(seed, ...) {
+  .assert_scalar_integer(seed, "seed", lower = 0)
+  key <- paste(..., collapse = "::")
+  code_points <- utf8ToInt(enc2utf8(key))
+  if (!length(code_points)) return(as.integer(seed))
+  weights <- (seq_along(code_points) %% 104729L) + 1L
+  modulus <- .Machine$integer.max - 1
+  value <- (as.double(seed) + sum(as.double(code_points) * weights)) %% modulus
+  as.integer(value + 1)
 }
 
 .as_numeric_matrix <- function(x, name) {
@@ -111,6 +146,7 @@
   weights <- layer_weights %||% rep(1, length(layers))
   if (!is.null(names(weights))) weights <- weights[names(layers)]
   if (length(weights) != length(layers) || anyNA(weights) ||
+        any(!is.finite(weights)) ||
         any(weights < 0) || sum(weights) <= 0) {
     .abort("Layer weights must provide one non-negative value per layer.")
   }

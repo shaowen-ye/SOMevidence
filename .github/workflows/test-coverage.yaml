@@ -1,0 +1,54 @@
+name: test-coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr, any::xml2
+          needs: coverage
+      - name: Measure and enforce test coverage
+        run: |
+          coverage <- covr::package_coverage(type = "tests")
+          print(coverage)
+          percent <- covr::percent_coverage(coverage)
+          writeLines(
+            sprintf("Package test coverage: %.2f%%", percent),
+            "coverage-summary.txt"
+          )
+          covr::to_cobertura(coverage, filename = "cobertura.xml")
+          if (percent < 80) {
+            stop(sprintf("Test coverage %.2f%% is below the 80%% threshold.", percent))
+          }
+        shell: Rscript {0}
+      - name: Publish coverage summary
+        if: always()
+        run: |
+          if [ -f coverage-summary.txt ]; then
+            cat coverage-summary.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage
+          path: |
+            coverage-summary.txt
+            cobertura.xml
+          if-no-files-found: ignore

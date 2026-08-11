@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible problem in SOMevidence
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not upload confidential data, unpublished coordinates, or credentials.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproducible_example
+    attributes:
+      label: Minimal reproducible example
+      description: Use simulated or non-sensitive data whenever possible.
+      render: R
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Complete error, warning, or diagnostic output
+      render: text
+  - type: textarea
+    id: session
+    attributes:
+      label: Package version and session information
+      description: Include packageVersion("SOMevidence") and sessionInfo().
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: I removed confidential data, personal information, coordinates, and credentials.
+          required: true

@@ -29,6 +29,7 @@ of clusters.
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://shaowen-ye.github.io/SOMevidence/}
   \item \url{https://shaowen-ye.r-universe.dev/SOMevidence}
   \item \url{https://github.com/shaowen-ye/SOMevidence}
   \item Report bugs at \url{https://github.com/shaowen-ye/SOMevidence/issues}

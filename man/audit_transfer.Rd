@@ -19,3 +19,10 @@ out samples mapped to units unoccupied during training. These quantities
 describe domain shift; they do not establish ecological transferability on
 their own.
 }
+\examples{
+data <- simulate_som_scenario("gradient", n = 60, p = 3, seed = 7)
+splits <- som_resamples(data, method = "leave_domain_out")
+specification <- som_spec(c(3, 2), seeds = 1, rlen = 10, k = 2)
+ensemble <- fit_som_ensemble(data, specification, splits)
+audit_transfer(ensemble)
+}

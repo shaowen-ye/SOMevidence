@@ -6,13 +6,16 @@
 #'
 #' @param data A `som_data` object.
 #' @param spec A `som_spec` object.
-#' @param resamples Optional `som_resamples` object.
+#' @param resamples Optional `som_resamples` object. If `NULL`, a single
+#'   full-data split is used; that run does not assess perturbation under
+#'   resampling.
 #' @param preprocess One `som_preprocess` object or a named object per layer.
 #' @param k Candidate numbers of hard partitions.
 #' @param cross_models Controlled reference methods passed to
 #'   [fit_cross_models()]. Use `character()` to skip cross-model fitting.
 #' @param cross_model_control Named list of optional `kmeans_seeds`,
-#'   `kmeans_nstart`, `kmeans_iter_max` or `gmm_model_names` settings forwarded
+#'   `kmeans_nstart`, `kmeans_iter_max`, `gmm_model_names` or `gmm_seed`
+#'   settings forwarded
 #'   to [fit_cross_models()]. Methods, candidate `k`, model retention and
 #'   failure policy remain controlled by this workflow.
 #' @param consensus_method Consensus method passed to [consensus_som()].
@@ -22,9 +25,18 @@
 #' @param fail_fast Whether a model or consensus failure should stop the run.
 #' @param parallel Whether SOM ensemble members should use the current
 #'   `future` plan; passed to [fit_som_ensemble()].
+#' @param max_pairwise_comparisons Pairwise partition-comparison budget passed
+#'   to [partition_som()].
 #'
 #' @return A `som_workflow` object containing each evidence stream and explicit
 #'   failure logs.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 60, p = 4, seed = 6)
+#' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2:3)
+#' workflow <- run_som_workflow(
+#'   data, specification, cross_models = c("kmeans", "ward")
+#' )
+#' summary(workflow)
 #' @export
 run_som_workflow <- function(
   data,
@@ -32,18 +44,20 @@ run_som_workflow <- function(
   resamples = NULL,
   preprocess = som_preprocess(),
   k = spec$k,
-  cross_models = c("kmeans", "ward", "gmm"),
+  cross_models = c("kmeans", "ward"),
   cross_model_control = list(),
   consensus_method = "auto",
   max_coassignment_n = 5000L,
   keep_models = FALSE,
   fail_fast = FALSE,
-  parallel = FALSE
+  parallel = FALSE,
+  max_pairwise_comparisons = 1000000L
 ) {
   .assert_flag(keep_models, "keep_models")
   .assert_flag(fail_fast, "fail_fast")
   allowed_control <- c(
-    "kmeans_seeds", "kmeans_nstart", "kmeans_iter_max", "gmm_model_names"
+    "kmeans_seeds", "kmeans_nstart", "kmeans_iter_max", "gmm_model_names",
+    "gmm_seed"
   )
   invalid_control_names <- is.list(cross_model_control) &&
     length(cross_model_control) &&
@@ -67,7 +81,10 @@ run_som_workflow <- function(
     parallel = parallel
   )
   audit <- audit_som(ensemble)
-  partitions <- partition_som(ensemble, k = k)
+  partitions <- partition_som(
+    ensemble, k = k,
+    max_pairwise_comparisons = max_pairwise_comparisons
+  )
 
   consensus <- list()
   consensus_failures <- list()
@@ -119,7 +136,18 @@ run_som_workflow <- function(
     comparison <- compare_cross_models(partitions, references)
   }
 
-  structure(
+  provenance_dependencies <- c("kohonen", "clue", "withr")
+  if (!is.null(references) && "gmm" %in% references$methods) {
+    provenance_dependencies <- c(provenance_dependencies, "mclust")
+  }
+  dependency_versions <- vapply(provenance_dependencies, function(package) {
+    if (requireNamespace(package, quietly = TRUE)) {
+      as.character(utils::packageVersion(package))
+    } else {
+      NA_character_
+    }
+  }, character(1))
+  output <- structure(
     list(
       ensemble = ensemble,
       audit = audit,
@@ -127,20 +155,152 @@ run_som_workflow <- function(
       consensus = consensus,
       consensus_failures = consensus_failure_table,
       cross_models = references,
-      cross_comparison = comparison
+      cross_comparison = comparison,
+      requested_k = sort(unique(as.integer(k))),
+      provenance = list(
+        package_version = tryCatch(
+          as.character(utils::packageVersion("SOMevidence")),
+          error = function(e) NA_character_
+        ),
+        r_version = R.version.string,
+        platform = R.version$platform,
+        dependency_versions = dependency_versions,
+        sample_ids = as.character(data$metadata$id),
+        split_ids = vapply(
+          ensemble$resamples$splits, `[[`, character(1), "id"
+        )
+      )
     ),
     class = "som_workflow"
   )
+  output
 }
 
 #' @export
 print.som_workflow <- function(x, ...) {
+  som_success <- sum(vapply(
+    x$ensemble$fits, function(fit) isTRUE(fit$success), logical(1)
+  ))
   cat("<som_workflow>\n")
-  cat("  SOM fits      :", x$ensemble$expected_models, "attempted\n")
-  cat("  candidate k   :", paste(x$partitions$stability$k, collapse = ", "), "\n")
-  cat("  consensus     :", length(x$consensus), "successful\n")
+  cat("  SOM fits      :", x$ensemble$expected_models, "attempted;",
+      som_success, "succeeded;", nrow(x$ensemble$failures), "failed;",
+      nrow(x$ensemble$warnings), "warnings\n")
+  cat("  candidate k   :", paste(
+    x$requested_k %||% x$partitions$stability$k, collapse = ", "
+  ), "\n")
+  cat("  consensus     :", length(x$consensus), "succeeded;",
+      nrow(x$consensus_failures), "failed\n")
   if (!is.null(x$cross_models)) {
-    cat("  cross-model   :", length(x$cross_models$records), "successful fits\n")
+    cat("  cross-model   :", length(x$cross_models$records), "succeeded;",
+        nrow(x$cross_models$failures), "failed;",
+        nrow(x$cross_models$warnings), "warnings\n")
+    method_status <- summary(x)$cross_models
+    for (i in seq_len(nrow(method_status))) {
+      cat(sprintf(
+        "    - %s: %d succeeded, %d failed, %d warnings\n",
+        method_status$method[[i]], method_status$succeeded[[i]],
+        method_status$failed[[i]], method_status$warnings[[i]]
+      ))
+    }
+  }
+  invisible(x)
+}
+
+#' Summarize workflow quality assurance and model outcomes
+#'
+#' @param object A `som_workflow` object.
+#' @param ... Reserved for future methods.
+#'
+#' @return A `summary.som_workflow` object containing fit, consensus,
+#'   cross-model and provenance summaries plus the original failure tables.
+#' @export
+summary.som_workflow <- function(object, ...) {
+  som_success <- sum(vapply(
+    object$ensemble$fits, function(fit) isTRUE(fit$success), logical(1)
+  ))
+  som <- data.frame(
+    attempted = object$ensemble$expected_models,
+    succeeded = som_success,
+    failed = nrow(object$ensemble$failures),
+    warnings = nrow(object$ensemble$warnings),
+    success_rate = object$audit$success_rate,
+    stringsAsFactors = FALSE
+  )
+  requested_k <- object$requested_k %||% .workflow_requested_k(object)
+  consensus <- data.frame(
+    k = requested_k,
+    status = ifelse(
+      paste0("k", requested_k) %in% names(object$consensus),
+      "succeeded", "failed"
+    ),
+    stringsAsFactors = FALSE
+  )
+  methods <- if (is.null(object$cross_models)) {
+    character()
+  } else {
+    object$cross_models$methods
+  }
+  cross_models <- do.call(rbind, lapply(methods, function(method) {
+    succeeded <- sum(vapply(object$cross_models$records, function(record) {
+      identical(record$method, method)
+    }, logical(1)))
+    data.frame(
+      method = method,
+      succeeded = succeeded,
+      failed = sum(object$cross_models$failures$method == method),
+      warnings = sum(object$cross_models$warnings$method == method),
+      stringsAsFactors = FALSE
+    )
+  }))
+  if (is.null(cross_models)) {
+    cross_models <- data.frame(
+      method = character(), succeeded = integer(), failed = integer(),
+      warnings = integer(), stringsAsFactors = FALSE
+    )
+  }
+  structure(
+    list(
+      som = som,
+      consensus = consensus,
+      cross_models = cross_models,
+      failures = list(
+        som = object$ensemble$failures,
+        consensus = object$consensus_failures,
+        cross_models = if (is.null(object$cross_models)) {
+          data.frame()
+        } else {
+          object$cross_models$failures
+        }
+      ),
+      warnings = list(
+        som = object$ensemble$warnings,
+        cross_models = if (is.null(object$cross_models)) {
+          data.frame()
+        } else {
+          object$cross_models$warnings
+        }
+      ),
+      provenance = object$provenance
+    ),
+    class = "summary.som_workflow"
+  )
+}
+
+#' @export
+print.summary.som_workflow <- function(x, ...) {
+  cat("<summary.som_workflow>\n")
+  cat("  SOM success:", x$som$succeeded, "/", x$som$attempted, "\n")
+  cat("  consensus  :", sum(x$consensus$status == "succeeded"), "/",
+      nrow(x$consensus), "\n")
+  if (nrow(x$cross_models)) {
+    cat("  reference methods:\n")
+    for (i in seq_len(nrow(x$cross_models))) {
+      cat(sprintf(
+        "    - %s: %d succeeded, %d failed, %d warnings\n",
+        x$cross_models$method[[i]], x$cross_models$succeeded[[i]],
+        x$cross_models$failed[[i]], x$cross_models$warnings[[i]]
+      ))
+    }
   }
   invisible(x)
 }
@@ -156,6 +316,7 @@ print.som_workflow <- function(x, ...) {
   partition$scenario <- rep(scenario, nrow(partition))
   partition$consensus_method <- rep(NA_character_, nrow(partition))
   partition$consensus_assignment_coverage <- rep(NA_real_, nrow(partition))
+  partition$consensus_label_coverage <- rep(NA_real_, nrow(partition))
   partition$replicated_assignment_coverage <- rep(NA_real_, nrow(partition))
   partition$min_cluster_jaccard <- rep(NA_real_, nrow(partition))
   partition$median_membership_support <- rep(NA_real_, nrow(partition))
@@ -166,12 +327,14 @@ print.som_workflow <- function(x, ...) {
       partition$consensus_method[[i]] <- consensus$method
       partition$consensus_assignment_coverage[[i]] <-
         consensus$assignment_coverage
+      partition$consensus_label_coverage[[i]] <-
+        consensus$consensus_label_coverage %||% consensus$assignment_coverage
       partition$replicated_assignment_coverage[[i]] <-
         consensus$replicated_assignment_coverage
-      partition$min_cluster_jaccard[[i]] <- min(
-        consensus$cluster_summary$median_jaccard,
-        na.rm = TRUE
-      )
+      cluster_values <- consensus$cluster_summary$median_jaccard
+      partition$min_cluster_jaccard[[i]] <- if (
+        length(cluster_values) && all(is.finite(cluster_values))
+      ) min(cluster_values) else NA_real_
       partition$median_membership_support[[i]] <- stats::median(
         consensus$membership_support,
         na.rm = TRUE
@@ -575,6 +738,8 @@ print.som_workflow <- function(x, ...) {
 #'   scenario through [run_som_workflow()].
 #' @param consensus_method Consensus method used in every scenario.
 #' @param max_coassignment_n Dense co-assignment limit.
+#' @param max_pairwise_comparisons Pairwise partition-comparison budget passed
+#'   to each scenario.
 #' @param sample_profiles Whether to compute sample-level membership-set
 #'   contrasts. Set to `FALSE` when the number of scenarios and samples would
 #'   make the pairwise long table unnecessarily large.
@@ -608,10 +773,11 @@ print.som_workflow <- function(x, ...) {
 #' @export
 run_som_sensitivity <- function(
   scenarios,
-  cross_models = c("kmeans", "ward", "gmm"),
+  cross_models = c("kmeans", "ward"),
   cross_model_control = list(),
   consensus_method = "auto",
   max_coassignment_n = 5000L,
+  max_pairwise_comparisons = 1000000L,
   sample_profiles = TRUE,
   keep_workflows = TRUE,
   fail_fast = FALSE
@@ -628,6 +794,8 @@ run_som_sensitivity <- function(
   failures <- list()
   summaries <- list()
   requested_k <- list()
+  model_failures <- list()
+  model_warnings <- list()
   for (scenario in names(scenarios)) {
     arguments <- scenarios[[scenario]]
     if (!is.list(arguments) || is.null(arguments$data) || is.null(arguments$spec)) {
@@ -638,6 +806,7 @@ run_som_sensitivity <- function(
     arguments$cross_model_control <- cross_model_control
     arguments$consensus_method <- consensus_method
     arguments$max_coassignment_n <- max_coassignment_n
+    arguments$max_pairwise_comparisons <- max_pairwise_comparisons
     result <- tryCatch(
       do.call(run_som_workflow, arguments),
       error = function(e) {
@@ -654,6 +823,63 @@ run_som_sensitivity <- function(
     } else {
       workflows[[scenario]] <- result
       summaries[[scenario]] <- .summarise_workflow(result, scenario)
+      if (nrow(result$ensemble$failures)) {
+        model_failures[[length(model_failures) + 1L]] <- data.frame(
+          scenario = scenario,
+          stage = "som",
+          id = result$ensemble$failures$id,
+          method = "som",
+          k = NA_integer_,
+          message = result$ensemble$failures$error,
+          stringsAsFactors = FALSE
+        )
+      }
+      if (nrow(result$consensus_failures)) {
+        model_failures[[length(model_failures) + 1L]] <- data.frame(
+          scenario = scenario,
+          stage = "consensus",
+          id = paste0("k", result$consensus_failures$k),
+          method = "consensus",
+          k = result$consensus_failures$k,
+          message = result$consensus_failures$error,
+          stringsAsFactors = FALSE
+        )
+      }
+      if (!is.null(result$cross_models) &&
+            nrow(result$cross_models$failures)) {
+        model_failures[[length(model_failures) + 1L]] <- data.frame(
+          scenario = scenario,
+          stage = "cross_model",
+          id = result$cross_models$failures$id,
+          method = result$cross_models$failures$method,
+          k = result$cross_models$failures$k,
+          message = result$cross_models$failures$error,
+          stringsAsFactors = FALSE
+        )
+      }
+      if (nrow(result$ensemble$warnings)) {
+        model_warnings[[length(model_warnings) + 1L]] <- data.frame(
+          scenario = scenario,
+          stage = "som",
+          id = result$ensemble$warnings$id,
+          method = "som",
+          k = NA_integer_,
+          message = result$ensemble$warnings$warning,
+          stringsAsFactors = FALSE
+        )
+      }
+      if (!is.null(result$cross_models) &&
+            nrow(result$cross_models$warnings)) {
+        model_warnings[[length(model_warnings) + 1L]] <- data.frame(
+          scenario = scenario,
+          stage = "cross_model",
+          id = result$cross_models$warnings$id,
+          method = result$cross_models$warnings$method,
+          k = result$cross_models$warnings$k,
+          message = result$cross_models$warnings$warning,
+          stringsAsFactors = FALSE
+        )
+      }
       if (identical(result$audit$success_rate, 0)) {
         messages <- unique(result$ensemble$failures$error)
         failures[[length(failures) + 1L]] <- data.frame(
@@ -668,6 +894,19 @@ run_som_sensitivity <- function(
     do.call(rbind, failures)
   } else {
     data.frame(scenario = character(), error = character())
+  }
+  bind_diagnostics <- function(x) {
+    if (length(x)) {
+      out <- do.call(rbind, x)
+      rownames(out) <- NULL
+      out
+    } else {
+      data.frame(
+        scenario = character(), stage = character(), id = character(),
+        method = character(), k = integer(), message = character(),
+        stringsAsFactors = FALSE
+      )
+    }
   }
   bind_summary <- function(name) {
     tables <- lapply(summaries, `[[`, name)
@@ -696,6 +935,8 @@ run_som_sensitivity <- function(
       sample_comparison = sample_evidence$comparison,
       sample_summary = sample_evidence$summary,
       failures = failure_table,
+      model_failures = bind_diagnostics(model_failures),
+      model_warnings = bind_diagnostics(model_warnings),
       workflows = if (keep_workflows) workflows else NULL
     ),
     class = "som_sensitivity"
@@ -724,6 +965,8 @@ print.som_sensitivity <- function(x, ...) {
   }
   cat("  sample profiles     :", sample_profiles, "sample-k rows\n")
   cat("  failed scenarios    :", nrow(x$failures), "\n")
+  cat("  model-stage failures:", nrow(x$model_failures %||% data.frame()), "\n")
+  cat("  model-stage warnings:", nrow(x$model_warnings %||% data.frame()), "\n")
   cat("  aggregate ranking   : not computed\n")
   invisible(x)
 }

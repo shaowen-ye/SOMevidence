@@ -21,6 +21,11 @@
 #' @param cores Number of cores used by `kohonen` in parallel batch mode.
 #'
 #' @return A `som_spec` object.
+#' @examples
+#' specification <- som_spec(
+#'   grids = list(c(4, 3), c(5, 4)), seeds = 1:2, rlen = 50, k = 2:4
+#' )
+#' expand_som_spec(specification)
 #' @export
 som_spec <- function(grids = data.frame(xdim = 7L, ydim = 5L),
                      seeds = 1:10, rlen = 500L,
@@ -59,7 +64,9 @@ som_spec <- function(grids = data.frame(xdim = 7L, ydim = 5L),
     .abort("`grids` must contain integer columns `xdim` and `ydim`.")
   }
   grids <- grids[, c("xdim", "ydim"), drop = FALSE]
-  if (anyNA(grids) || any(as.matrix(grids) %% 1 != 0) ||
+  if (anyNA(grids) || any(!is.finite(as.matrix(grids))) ||
+        any(as.matrix(grids) %% 1 != 0) ||
+        any(as.matrix(grids) > .Machine$integer.max) ||
         any(as.matrix(grids) < 2)) {
     .abort("Every grid dimension must be an integer of at least two.")
   }
@@ -68,19 +75,23 @@ som_spec <- function(grids = data.frame(xdim = 7L, ydim = 5L),
   grids <- unique(grids)
 
   if (!is.numeric(seeds) || !length(seeds) || anyNA(seeds) ||
-        any(seeds %% 1 != 0)) {
-    .abort("`seeds` must contain non-missing integers.")
+        any(!is.finite(seeds)) || any(seeds %% 1 != 0) ||
+        any(seeds < 0 | seeds > .Machine$integer.max)) {
+    .abort("`seeds` must contain non-missing integers in the R seed range.")
   }
   seeds <- unique(as.integer(seeds))
-  .assert_scalar_number(rlen, "rlen", lower = 1)
-  if (length(alpha) != 2L || anyNA(alpha) || any(alpha <= 0)) {
+  .assert_scalar_integer(rlen, "rlen", lower = 1)
+  if (!is.numeric(alpha) || length(alpha) != 2L || anyNA(alpha) ||
+        any(!is.finite(alpha)) || any(alpha <= 0)) {
     .abort("`alpha` must contain two positive numbers.")
   }
   if (!is.null(radius) &&
-        (!is.numeric(radius) || !length(radius) || anyNA(radius) || any(radius < 0))) {
+        (!is.numeric(radius) || !length(radius) || anyNA(radius) ||
+           any(!is.finite(radius)) || any(radius < 0))) {
     .abort("`radius` must be NULL or a non-negative numeric vector.")
   }
-  if (!is.numeric(k) || !length(k) || anyNA(k) || any(k %% 1 != 0) || any(k < 2)) {
+  if (!is.numeric(k) || !length(k) || anyNA(k) || any(!is.finite(k)) ||
+        any(k %% 1 != 0) || any(k < 2) || any(k > .Machine$integer.max)) {
     .abort("`k` must contain integers of at least two.")
   }
   k <- sort(unique(as.integer(k)))
@@ -95,10 +106,11 @@ som_spec <- function(grids = data.frame(xdim = 7L, ydim = 5L),
   .assert_scalar_number(max_na_fraction, "max_na_fraction", 0, 1)
   if (!is.null(layer_weights) &&
         (!is.numeric(layer_weights) || anyNA(layer_weights) ||
+           any(!is.finite(layer_weights)) ||
            any(layer_weights < 0) || sum(layer_weights) <= 0)) {
     .abort("`layer_weights` must be non-negative with a positive sum.")
   }
-  .assert_scalar_number(cores, "cores", lower = 1)
+  .assert_scalar_integer(cores, "cores", lower = 1)
 
   structure(
     list(
@@ -125,6 +137,8 @@ som_spec <- function(grids = data.frame(xdim = 7L, ydim = 5L),
 #'
 #' @param spec A `som_spec` object.
 #' @return A data frame with one row per grid and random seed.
+#' @examples
+#' expand_som_spec(som_spec(c(4, 3), seeds = 1:3, rlen = 20, k = 2:3))
 #' @export
 expand_som_spec <- function(spec) {
   if (!inherits(spec, "som_spec")) .abort("`spec` must come from `som_spec()`.")

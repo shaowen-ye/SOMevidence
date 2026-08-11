@@ -13,8 +13,9 @@ som_preprocess(
 }
 \arguments{
 \item{transform}{One of \code{"identity"}, \code{"log"}, \code{"log1p"}, \code{"sqrt"},
-\code{"hellinger"} or \code{"clr"}. A vector can assign \code{"identity"}, \code{"log1p"}
-\code{"log"} or \code{"sqrt"} by column; name that vector to protect against
+\code{"hellinger"} or \code{"clr"}. \code{"log"} denotes the natural logarithm. A
+vector can assign \code{"identity"}, \code{"log1p"}, \code{"log"} or \code{"sqrt"} by
+column; name that vector to protect against
 column-order changes. Hellinger and CLR are whole-matrix transformations
 and must be specified alone.}
 
@@ -29,4 +30,7 @@ A preprocessing specification of class \code{som_preprocess}.
 }
 \description{
 Define leakage-safe SOM preprocessing
+}
+\examples{
+som_preprocess(transform = c("log", "identity"))
 }

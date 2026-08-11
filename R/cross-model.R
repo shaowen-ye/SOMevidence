@@ -69,21 +69,31 @@
       iter.max = kmeans_iter_max,
       algorithm = "Hartigan-Wong"
     ))
-    labels[predictable] <- .nearest_centroid(
-      x[predictable, , drop = FALSE], model$centers
-    )
+    labels[analysis] <- model$cluster
+    projection_rows <- setdiff(which(predictable), analysis)
+    if (length(projection_rows)) {
+      labels[projection_rows] <- .nearest_centroid(
+        x[projection_rows, , drop = FALSE], model$centers
+      )
+    }
     selected_model <- "Hartigan-Wong"
+    prediction_rule <- "training assignment; nearest-centroid projection"
   } else if (method == "ward") {
     tree <- stats::hclust(stats::dist(training), method = "ward.D2")
     training_labels <- stats::cutree(tree, k = k)
     centres <- do.call(rbind, lapply(seq_len(k), function(cluster) {
       colMeans(training[training_labels == cluster, , drop = FALSE])
     }))
-    labels[predictable] <- .nearest_centroid(
-      x[predictable, , drop = FALSE], centres
-    )
+    labels[analysis] <- training_labels
+    projection_rows <- setdiff(which(predictable), analysis)
+    if (length(projection_rows)) {
+      labels[projection_rows] <- .nearest_centroid(
+        x[projection_rows, , drop = FALSE], centres
+      )
+    }
     model <- list(tree = tree, centres = centres)
     selected_model <- "ward.D2"
+    prediction_rule <- "Ward.D2 cutree; nearest-centroid projection"
   } else {
     if (!requireNamespace("mclust", quietly = TRUE)) {
       .abort("Package `mclust` is required for Gaussian mixture models.")
@@ -91,23 +101,28 @@
     # Mclust evaluates a reconstructed mclustBIC call in the caller. Provide
     # the namespaced function locally so optional use does not require
     # attaching the whole mclust package to the search path.
-    assign("mclustBIC", mclust::mclustBIC) # nolint: object_name_linter.
-    model <- mclust::Mclust(
-      training,
-      G = k, modelNames = gmm_model_names, verbose = FALSE
-    )
+    assign("mclustBIC", mclust::mclustBIC) # nolint: object_name_linter, object_usage_linter.
+    model <- .with_reproducible_seed(seed, mclust::Mclust(
+      training, G = k, modelNames = gmm_model_names, verbose = FALSE
+    ))
     if (is.null(model$classification) || model$G != k) {
       .abort("The Gaussian mixture model did not return the requested partition.")
     }
-    predicted <- stats::predict(
-      model, newdata = x[predictable, , drop = FALSE]
-    )
-    labels[predictable] <- predicted$classification
+    labels[analysis] <- model$classification
+    projection_rows <- setdiff(which(predictable), analysis)
+    if (length(projection_rows)) {
+      predicted <- stats::predict(
+        model, newdata = x[projection_rows, , drop = FALSE]
+      )
+      labels[projection_rows] <- predicted$classification
+    }
     selected_model <- model$modelName
+    prediction_rule <- "model classification; posterior projection"
   }
   list(
     sample_labels = as.integer(labels),
     selected_model = selected_model,
+    prediction_rule = prediction_rule,
     model = model
   )
 }
@@ -130,20 +145,29 @@
 #'   [mclust::Mclust()]. BIC selection occurs within each analysis split.
 #' @param keep_models Whether to retain fitted cross-model objects.
 #' @param fail_fast Whether to stop at the first fit failure.
+#' @param gmm_seed Base random seed for reproducible GMM initialization. A
+#'   deterministic fit-specific seed is derived from the split and candidate
+#'   `k`, and is retained in the result object.
 #'
 #' @return A `som_cross_models` object with partitions, warnings and explicit
 #'   failures.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 4)
+#' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+#' ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+#' fit_cross_models(ensemble, methods = c("kmeans", "ward"))
 #' @export
 fit_cross_models <- function(
   ensemble,
-  methods = c("kmeans", "ward", "gmm"),
+  methods = c("kmeans", "ward"),
   k = ensemble$spec$k,
   kmeans_seeds = 1L,
   kmeans_nstart = 50L,
   kmeans_iter_max = 100L,
   gmm_model_names = NULL,
   keep_models = FALSE,
-  fail_fast = FALSE
+  fail_fast = FALSE,
+  gmm_seed = 1L
 ) {
   if (!inherits(ensemble, "som_ensemble")) {
     .abort("`ensemble` must come from `fit_som_ensemble()`.")
@@ -151,19 +175,17 @@ fit_cross_models <- function(
   methods <- unique(match.arg(methods, c("kmeans", "ward", "gmm"),
     several.ok = TRUE
   ))
-  if (!is.numeric(k) || !length(k) || anyNA(k) || any(k < 2) ||
-        any(k %% 1 != 0)) {
-    .abort("`k` must contain integers of at least two.")
+  if ("gmm" %in% methods && !requireNamespace("mclust", quietly = TRUE)) {
+    .abort(paste0(
+      "Method `gmm` requires the suggested package `mclust`; install it ",
+      "or request only `kmeans` and/or `ward`."
+    ))
   }
-  if (!is.numeric(kmeans_seeds) || !length(kmeans_seeds) ||
-        anyNA(kmeans_seeds) || any(kmeans_seeds %% 1 != 0)) {
-    .abort("`kmeans_seeds` must contain non-missing integers.")
-  }
-  .assert_scalar_number(kmeans_nstart, "kmeans_nstart", lower = 1)
-  .assert_scalar_number(kmeans_iter_max, "kmeans_iter_max", lower = 1)
-  if (kmeans_nstart %% 1 != 0 || kmeans_iter_max %% 1 != 0) {
-    .abort("`kmeans_nstart` and `kmeans_iter_max` must be integers.")
-  }
+  .assert_integer_vector(k, "k", lower = 2)
+  .assert_integer_vector(kmeans_seeds, "kmeans_seeds", lower = 0)
+  .assert_scalar_integer(kmeans_nstart, "kmeans_nstart", lower = 1)
+  .assert_scalar_integer(kmeans_iter_max, "kmeans_iter_max", lower = 1)
+  .assert_scalar_integer(gmm_seed, "gmm_seed", lower = 0)
   .assert_flag(keep_models, "keep_models")
   .assert_flag(fail_fast, "fail_fast")
 
@@ -182,12 +204,19 @@ fit_cross_models <- function(
       error = function(e) e
     )
     for (method in methods) {
-      seeds <- if (method == "kmeans") as.integer(kmeans_seeds) else NA_integer_
+      seeds <- if (method == "kmeans") {
+        as.integer(kmeans_seeds)
+      } else {
+        NA_integer_
+      }
       for (candidate_k in sort(unique(as.integer(k)))) {
+        if (method == "gmm") {
+          seeds <- .seed_from_key(gmm_seed, split$id, paste0("k", candidate_k))
+        }
         for (seed in seeds) {
           id <- paste(
             split$id, method, paste0("k", candidate_k),
-            if (method == "kmeans") paste0("s", seed) else NULL,
+            if (method %in% c("kmeans", "gmm")) paste0("s", seed) else NULL,
             sep = "__"
           )
           captured <- .capture_warnings({
@@ -231,6 +260,7 @@ fit_cross_models <- function(
               k = candidate_k,
               seed = seed,
               selected_model = fitted$selected_model,
+              prediction_rule = fitted$prediction_rule,
               sample_labels = fitted$sample_labels,
               analysis = split$analysis,
               assessment = split$assessment,
@@ -285,8 +315,16 @@ fit_cross_models <- function(
 #'   scope is the default for hard-partition defensibility; assessment scope is
 #'   a separate mapping-transfer diagnostic.
 #'
-#' @return A `som_cross_comparison` containing ARI and AMI effect sizes and
-#'   summaries. Neither metric is reported as accuracy.
+#' @return A `som_cross_comparison` containing ARI and AMI effect sizes,
+#'   summaries, reference-fit success rates and source-partition completeness.
+#'   Neither agreement metric is reported as accuracy.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 5)
+#' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+#' ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+#' partitions <- partition_som(ensemble)
+#' references <- fit_cross_models(ensemble, methods = "ward")
+#' compare_cross_models(partitions, references)
 #' @export
 compare_cross_models <- function(
   partitions, cross_models,
@@ -385,12 +423,55 @@ compare_cross_models <- function(
     )
   }
   rownames(summary) <- NULL
+  reference_grid <- expand.grid(
+    method = cross_models$methods,
+    k = cross_models$k,
+    stringsAsFactors = FALSE
+  )
+  reference_status <- do.call(rbind, lapply(
+    seq_len(nrow(reference_grid)),
+    function(i) {
+      method <- reference_grid$method[[i]]
+      candidate_k <- reference_grid$k[[i]]
+      succeeded <- sum(vapply(cross_models$records, function(record) {
+        identical(record$method, method) && record$k == candidate_k
+      }, logical(1)))
+      failed <- sum(
+        cross_models$failures$method == method &
+          cross_models$failures$k == candidate_k
+      )
+      expected <- succeeded + failed
+      data.frame(
+        method = method,
+        k = candidate_k,
+        n_expected = expected,
+        n_succeeded = succeeded,
+        n_failed = failed,
+        success_rate = if (expected) succeeded / expected else NA_real_,
+        stringsAsFactors = FALSE
+      )
+    }
+  ))
+  rownames(reference_status) <- NULL
+  completeness_columns <- intersect(
+    c(
+      "k", "n_partitions", "n_complete_partitions",
+      "min_observed_clusters"
+    ),
+    names(partitions$stability)
+  )
+  partition_completeness <- partitions$stability[
+    , completeness_columns, drop = FALSE
+  ]
   structure(
     list(
       comparisons = comparisons,
       summary = summary,
       failures = cross_models$failures,
       warnings = cross_models$warnings,
+      methods = cross_models$methods,
+      reference_status = reference_status,
+      partition_completeness = partition_completeness,
       scope = scope,
       ensemble = partitions$ensemble
     ),

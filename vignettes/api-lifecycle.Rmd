@@ -13,46 +13,108 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 ## Why the package has contracts
 
-`SOMevidence` treats software interfaces as part of reproducibility. A change to
-an argument name or a returned evidence table can invalidate an analysis even
-when the numerical algorithm is unchanged. The package therefore ships two
-machine-readable versioned contracts:
+`SOMevidence` treats software interfaces and evidence structures as part of
+reproducibility. A changed argument, default, or returned field can alter an
+analysis even when a function retains the same name. The package therefore
+ships machine-readable contracts for both exported functions and returned
+objects.
+
+The version 1.0.0 contracts remain the structural compatibility baseline. The
+current 1.1.0 contracts describe additive interfaces and scientific
+corrections that make previously implicit safeguards observable. Structural
+compatibility does not imply that an analysis which omits version-sensitive
+defaults will be numerically identical across releases.
 
 ```{r contracts}
-api_path <- system.file(
-  "extdata", "api-contract-v1.0.0.csv", package = "SOMevidence"
-)
-object_path <- system.file(
-  "extdata", "object-contract-v1.0.0.csv", package = "SOMevidence"
-)
-api_contract <- utils::read.csv(api_path, check.names = FALSE)
-object_contract <- utils::read.csv(object_path, check.names = FALSE)
+contract_path <- function(name) {
+  system.file("extdata", name, package = "SOMevidence")
+}
 
+baseline_api <- utils::read.csv(
+  contract_path("api-contract-v1.0.0.csv"),
+  check.names = FALSE
+)
+api_contract <- utils::read.csv(
+  contract_path("api-contract-v1.1.0.csv"),
+  check.names = FALSE
+)
+object_contract <- utils::read.csv(
+  contract_path("object-contract-v1.1.0.csv"),
+  check.names = FALSE
+)
+
+c(baseline_exports = nrow(baseline_api), current_exports = nrow(api_contract))
 table(api_contract$lifecycle)
 head(object_contract[c("class", "lifecycle")])
 ```
 
-Automated tests compare these files with the namespace, function formals and
-returned object structures. The 1.0.0 contracts define the first public API
-compatibility promise.
+Automated tests require all baseline arguments to remain present and in their
+original order. They also compare the current namespace, complete function
+formals, key defaults, return classes, object components, and selected evidence
+table schemas with the 1.1.0 contracts.
+
+## What changed in the 1.1.0 contract
+
+The current contract makes several correctness safeguards explicit:
+
+- named multi-layer inputs are aligned by sample identity or rejected;
+- resampling objects retain ordered sample identifiers and unique split IDs;
+- Ward.D2 training labels remain the `cutree()` partition, whereas new rows use
+  an explicitly named nearest-centroid projection rule;
+- GMM initialization uses a recorded deterministic seed;
+- partition records retain the number of sample-level classes actually
+  observed, and incomplete `k` partitions cannot enter consensus;
+- aligned voting can propagate labels along a connected overlap path and
+  reports consensus-label coverage separately from assignment coverage;
+- pairwise auditing has a user-visible computation budget;
+- transfer evidence reports mapping counts and coverage;
+- training-constant variables are excluded from held-out distance; and
+- cross-model gates use method-specific evidence rather than a pooled median.
+
+Version 1.1.0 also changes the default reference set from K-means, Ward.D2 and
+GMM to K-means and Ward.D2. This avoids making an optional dependency and its
+additional model-selection step part of every default run. To reproduce the
+1.0 default reference set, request it explicitly:
+
+```r
+cross_models <- c("kmeans", "ward", "gmm")
+```
+
+This default change can alter fitted evidence and is therefore recorded in the
+versioned contract and `NEWS.md`. Reproducible analyses should pin the package
+version and specify the reference methods rather than relying on defaults.
+
+The top-level workflow now records requested candidate values and lightweight
+software provenance. Its summary reports model, consensus, warning, and failure
+counts without requiring users to traverse nested lists. Compact sensitivity
+results retain model-stage failures and warnings, and new-data mapping objects
+retain structured warnings.
+
+These are software and evidential safeguards. They do not turn internal
+validity, cross-model agreement, or transfer diagnostics into ecological truth.
 
 ## Stable and experimental interfaces
 
 Stable functions cover the data contract, preprocessing, sampling design,
-ensemble fitting, evidence audits, transfer and conditional decision gates.
-Breaking changes require a new major package version.
+ensemble fitting, evidence audits, transfer, and conditional decision gates.
+The names and positional prefix of stable 1.0.0 arguments remain supported.
+Removing or reordering those arguments, or withdrawing a documented object
+guarantee, requires a new major package version. Analysis-affecting default
+changes must be explicit in a versioned contract and release notes; publication
+workflows should still record every consequential setting directly.
 
 Three interfaces remain experimental:
 
 ```{r experimental}
 api_contract[api_contract$lifecycle == "experimental",
-             c("function", "notes")]
+             c("function", "return_class", "notes")]
 ```
 
-The optional GUI exports ordinary R code and a YAML configuration. The R code,
-not the interactive session, is the reproducible record. The sensitivity and
-simulation interfaces remain experimental because external users may expose
-better ways to describe scenarios.
+`launch_som_app()` returns a `shiny.appobj`. It can be printed in an interactive
+session or passed to `shiny::runApp()`, but it does not return an analysis
+result. The exported R script, not the interactive session, is the executable
+analysis record. The sensitivity and simulation interfaces also remain
+experimental because their scenario descriptions may evolve after broader use.
 
 ## Object boundaries are scientific boundaries
 
@@ -60,19 +122,21 @@ The returned classes keep distinct questions apart:
 
 - `som_audit` concerns representation quality;
 - `som_partitions` and `som_consensus` concern analysis-scope hard-partition
-  stability; held-out mappings belong to transfer evidence;
+  stability;
 - `som_cross_comparison` concerns algorithmic agreement;
-- `som_transfer_audit` concerns held-domain behaviour; and
+- `som_transfer_audit` concerns held-domain behaviour;
+- `som_external_assessment` concerns post hoc agreement with labels excluded
+  from training; and
 - `som_defensibility` records an analyst-specified conditional decision.
 
-No object is a certificate of ecological truth. External labels are held out
-from training, cross-model agreement is not a leaderboard and insufficient
-evidence may lead to abstention.
+No object is a certificate of ecological truth. Cross-model agreement is not a
+leaderboard, external-label agreement is not classification accuracy, missing
+evidence remains visible, and insufficient evidence may lead to abstention.
 
 ## Reporting an analysis
 
 Archive the package version, session information, analysis script, sampling
-design and gate settings with every analysis:
+design, and gate settings with every analysis:
 
 ```{r report-version}
 packageVersion("SOMevidence")
@@ -80,5 +144,6 @@ sessionInfo()
 ```
 
 For work intended to support a publication, also retain the exact data
-provenance, random seeds, model failures, warnings and the API contract
-version used by the analysis.
+provenance, stable sample identifiers, preprocessing specification, random
+seeds, model failures, warnings, model budget, and API contract version used by
+the analysis.

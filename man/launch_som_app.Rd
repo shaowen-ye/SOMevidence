@@ -7,8 +7,9 @@
 launch_som_app()
 }
 \value{
-A running Shiny application. This function is interactive and does
-not return an analysis object to the calling session.
+A \code{shiny.appobj}. Pass it to \code{\link[shiny:runApp]{shiny::runApp()}} or print it in an
+interactive R session. The application does not return an analysis result;
+users can export the executable R script for a configured run.
 }
 \description{
 The Shiny interface exposes a compact subset of the package workflow for

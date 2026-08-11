@@ -1,8 +1,9 @@
 #' Define leakage-safe SOM preprocessing
 #'
 #' @param transform One of `"identity"`, `"log"`, `"log1p"`, `"sqrt"`,
-#'   `"hellinger"` or `"clr"`. A vector can assign `"identity"`, `"log1p"`
-#'   `"log"` or `"sqrt"` by column; name that vector to protect against
+#'   `"hellinger"` or `"clr"`. `"log"` denotes the natural logarithm. A
+#'   vector can assign `"identity"`, `"log1p"`, `"log"` or `"sqrt"` by
+#'   column; name that vector to protect against
 #'   column-order changes. Hellinger and CLR are whole-matrix transformations
 #'   and must be specified alone.
 #' @param center Whether to subtract training-set column means.
@@ -11,6 +12,8 @@
 #'   "clr"` and zeros are present.
 #'
 #' @return A preprocessing specification of class `som_preprocess`.
+#' @examples
+#' som_preprocess(transform = c("log", "identity"))
 #' @export
 som_preprocess <- function(
   transform = "identity",
@@ -164,7 +167,17 @@ som_preprocess <- function(
 
 .apply_preprocessor <- function(x, fitted) {
   transformed <- .transform_matrix(x, fitted)
-  sweep(sweep(transformed, 2L, fitted$means, "-"), 2L, fitted$scales, "/")
+  output <- sweep(
+    sweep(transformed, 2L, fitted$means, "-"),
+    2L, fitted$scales, "/"
+  )
+  if (any(fitted$constant)) {
+    # A variable with no training-set variation has no estimable distance
+    # scale. Exclude it from mapping distance instead of applying raw-unit
+    # deviations to held-out data through an arbitrary scale of one.
+    output[, fitted$constant] <- 0
+  }
+  output
 }
 
 .normalise_preprocess <- function(preprocess, layer_names) {

@@ -55,6 +55,10 @@
 #'
 #' @param ensemble A fitted `som_ensemble`.
 #' @return A `som_audit` object containing fit-level metrics and summaries.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 1)
+#' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+#' audit_som(fit_som_ensemble(data, specification, keep_models = FALSE))
 #' @export
 audit_som <- function(ensemble) {
   if (!inherits(ensemble, "som_ensemble")) {
@@ -69,7 +73,8 @@ audit_som <- function(ensemble) {
       empty_unit_rate = numeric(), stringsAsFactors = FALSE
     )
     grid_summary <- data.frame(
-      xdim = integer(), ydim = integer(), n_fits = integer(),
+      grid = character(), xdim = integer(), ydim = integer(),
+      n_fits = integer(),
       median_quantization_error = numeric(),
       median_topographic_error = numeric(),
       median_empty_unit_rate = numeric(), stringsAsFactors = FALSE
@@ -95,7 +100,8 @@ audit_som <- function(ensemble) {
       ydim = fit$ydim,
       seed = fit$seed,
       quantization_error = fit$training_quantization_error,
-      topographic_error = .topographic_error(fit, fit$analysis),
+      topographic_error = fit$training_topographic_error %||%
+        .topographic_error(fit, fit$analysis),
       empty_unit_rate = fit$empty_unit_rate,
       stringsAsFactors = FALSE
     )
@@ -104,6 +110,7 @@ audit_som <- function(ensemble) {
   key <- interaction(fit_metrics$xdim, fit_metrics$ydim, drop = TRUE)
   summary_rows <- lapply(split(fit_metrics, key), function(z) {
     data.frame(
+      grid = sprintf("%d x %d", z$xdim[[1L]], z$ydim[[1L]]),
       xdim = z$xdim[[1L]],
       ydim = z$ydim[[1L]],
       n_fits = nrow(z),
@@ -123,10 +130,12 @@ audit_som <- function(ensemble) {
     )
   })
 
+  grid_summary <- do.call(rbind, summary_rows)
+  rownames(grid_summary) <- NULL
   structure(
     list(
       fit_metrics = fit_metrics,
-      grid_summary = do.call(rbind, summary_rows),
+      grid_summary = grid_summary,
       success_rate = nrow(fit_metrics) / ensemble$expected_models,
       failures = ensemble$failures,
       ensemble = ensemble
@@ -236,23 +245,32 @@ print.som_audit <- function(x, ...) {
 #'   used to fit a given ensemble member. `"all"` explicitly audits the
 #'   stability of mapped labels for all rows and must not be used as training-
 #'   partition evidence in [assess_defensibility()].
+#' @param max_pairwise_comparisons Maximum number of pairwise partition
+#'   comparisons created across all requested `k`. This explicit budget guards
+#'   against quadratic growth in the number of ensemble members.
 #'
 #' @return A `som_partitions` object. Agreement is reported as ARI, not accuracy.
+#' @examples
+#' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 2)
+#' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
+#' ensemble <- fit_som_ensemble(data, specification, keep_models = FALSE)
+#' partition_som(ensemble)
 #' @export
 partition_som <- function(
   ensemble,
   k = ensemble$spec$k,
   method = "ward.D2",
-  scope = c("analysis", "all")
+  scope = c("analysis", "all"),
+  max_pairwise_comparisons = 1000000L
 ) {
   if (!inherits(ensemble, "som_ensemble")) {
     .abort("`ensemble` must come from `fit_som_ensemble()`.")
   }
   scope <- match.arg(scope)
-  if (!is.numeric(k) || !length(k) || anyNA(k) || any(k < 2) ||
-        any(k %% 1 != 0)) {
-    .abort("`k` must contain integers of at least two.")
-  }
+  .assert_integer_vector(k, "k", lower = 2)
+  .assert_scalar_integer(
+    max_pairwise_comparisons, "max_pairwise_comparisons", lower = 1
+  )
   k <- sort(unique(as.integer(k)))
   successful <- Filter(function(x) isTRUE(x$success), ensemble$fits)
   if (!length(successful)) {
@@ -266,6 +284,8 @@ partition_som <- function(
         ),
         stability = data.frame(
           k = integer(), scope = character(), n_pairs = integer(),
+          n_partitions = integer(), n_complete_partitions = integer(),
+          min_observed_clusters = integer(),
           n_pairs_evaluable = integer(), median_joint_n = numeric(),
           median_joint_coverage = numeric(), median_ari = numeric(),
           ari_q025 = numeric(), ari_q975 = numeric(), median_ami = numeric(),
@@ -289,6 +309,15 @@ partition_som <- function(
       "The smallest fitted grid has ", minimum_units, " units."
     ))
   }
+  requested_pairs <- choose(length(successful), 2) * length(k)
+  if (requested_pairs > max_pairwise_comparisons) {
+    .abort(paste0(
+      "The requested audit would create ", format(requested_pairs),
+      " pairwise comparisons, exceeding `max_pairwise_comparisons = ",
+      format(max_pairwise_comparisons), "`. Reduce the model budget or ",
+      "increase the limit deliberately."
+    ))
+  }
   records <- list()
   cursor <- 0L
   for (fit in successful) {
@@ -302,6 +331,7 @@ partition_som <- function(
       if (scope == "analysis") {
         sample_labels[-fit$analysis] <- NA_integer_
       }
+      observed_clusters <- sort(unique(stats::na.omit(sample_labels)))
       records[[cursor]] <- list(
         id = fit$id,
         split_id = fit$split_id,
@@ -312,12 +342,23 @@ partition_som <- function(
         unit_labels = unit_labels,
         mapped_labels = mapped_labels,
         sample_labels = sample_labels,
+        n_observed_clusters = length(observed_clusters),
+        observed_clusters = as.integer(observed_clusters),
+        missing_clusters = setdiff(seq_len(candidate_k), observed_clusters),
+        complete_k = length(observed_clusters) == candidate_k,
         scope = scope
       )
     }
   }
 
-  pairwise <- list()
+  pairwise_n <- as.integer(requested_pairs)
+  pairwise_k <- integer(pairwise_n)
+  pairwise_fit_a <- character(pairwise_n)
+  pairwise_fit_b <- character(pairwise_n)
+  pairwise_n_joint <- integer(pairwise_n)
+  pairwise_joint_coverage <- numeric(pairwise_n)
+  pairwise_ari <- numeric(pairwise_n)
+  pairwise_ami <- numeric(pairwise_n)
   cursor <- 0L
   for (candidate_k in sort(unique(k))) {
     subset <- Filter(function(z) z$k == candidate_k, records)
@@ -328,21 +369,32 @@ partition_som <- function(
       a <- subset[[pairs[1L, j]]]
       b <- subset[[pairs[2L, j]]]
       jointly_observed <- !is.na(a$sample_labels) & !is.na(b$sample_labels)
-      pairwise[[cursor]] <- data.frame(
-        k = candidate_k,
-        fit_a = a$id,
-        fit_b = b$id,
-        scope = scope,
-        n_joint = sum(jointly_observed),
-        joint_coverage = mean(jointly_observed),
-        ari = .adjusted_rand(a$sample_labels, b$sample_labels),
-        ami = .adjusted_mutual_info(a$sample_labels, b$sample_labels),
-        stringsAsFactors = FALSE
+      pairwise_k[[cursor]] <- candidate_k
+      pairwise_fit_a[[cursor]] <- a$id
+      pairwise_fit_b[[cursor]] <- b$id
+      pairwise_n_joint[[cursor]] <- sum(jointly_observed)
+      pairwise_joint_coverage[[cursor]] <- mean(jointly_observed)
+      pairwise_ari[[cursor]] <- .adjusted_rand(
+        a$sample_labels, b$sample_labels
+      )
+      pairwise_ami[[cursor]] <- .adjusted_mutual_info(
+        a$sample_labels, b$sample_labels
       )
     }
   }
-  pairwise_table <- if (length(pairwise)) {
-    do.call(rbind, pairwise)
+  pairwise_table <- if (cursor) {
+    used <- seq_len(cursor)
+    data.frame(
+      k = pairwise_k[used],
+      fit_a = pairwise_fit_a[used],
+      fit_b = pairwise_fit_b[used],
+      scope = rep(scope, cursor),
+      n_joint = pairwise_n_joint[used],
+      joint_coverage = pairwise_joint_coverage[used],
+      ari = pairwise_ari[used],
+      ami = pairwise_ami[used],
+      stringsAsFactors = FALSE
+    )
   } else {
     data.frame(
       k = integer(), fit_a = character(), fit_b = character(),
@@ -351,43 +403,55 @@ partition_som <- function(
     )
   }
 
-  stability <- if (nrow(pairwise_table)) {
-    do.call(rbind, lapply(split(pairwise_table, pairwise_table$k), function(z) {
+  stability <- do.call(rbind, lapply(k, function(candidate_k) {
+    z <- pairwise_table[pairwise_table$k == candidate_k, , drop = FALSE]
+    candidate_records <- Filter(function(record) {
+      record$k == candidate_k
+    }, records)
+    if (nrow(z)) {
       interval <- .quantile_safe(z$ari, c(0.025, 0.975))
       ami_interval <- .quantile_safe(z$ami, c(0.025, 0.975))
       finite_ari <- z$ari[is.finite(z$ari)]
       finite_ami <- z$ami[is.finite(z$ami)]
-      data.frame(
-        k = z$k[[1L]],
-        scope = z$scope[[1L]],
-        n_pairs = nrow(z),
-        n_pairs_evaluable = sum(is.finite(z$ari) & is.finite(z$ami)),
-        median_joint_n = stats::median(z$n_joint),
-        median_joint_coverage = stats::median(z$joint_coverage),
-        median_ari = if (length(finite_ari)) stats::median(finite_ari) else NA_real_,
-        ari_q025 = interval[[1L]],
-        ari_q975 = interval[[2L]],
-        median_ami = if (length(finite_ami)) stats::median(finite_ami) else NA_real_,
-        ami_q025 = ami_interval[[1L]],
-        ami_q975 = ami_interval[[2L]],
-        stringsAsFactors = FALSE
-      )
-    }))
-  } else {
+    } else {
+      interval <- ami_interval <- c(NA_real_, NA_real_)
+      finite_ari <- finite_ami <- numeric()
+    }
     data.frame(
-      k = integer(), scope = character(), n_pairs = integer(),
-      n_pairs_evaluable = integer(), median_joint_n = numeric(),
-      median_joint_coverage = numeric(),
-      median_ari = numeric(),
-      ari_q025 = numeric(), ari_q975 = numeric(), median_ami = numeric(),
-      ami_q025 = numeric(), ami_q975 = numeric()
+      k = candidate_k,
+      scope = scope,
+      n_pairs = nrow(z),
+      n_partitions = length(candidate_records),
+      n_complete_partitions = sum(vapply(
+        candidate_records, `[[`, logical(1), "complete_k"
+      )),
+      min_observed_clusters = min(vapply(
+        candidate_records, `[[`, integer(1), "n_observed_clusters"
+      )),
+      n_pairs_evaluable = sum(is.finite(z$ari) & is.finite(z$ami)),
+      median_joint_n = if (nrow(z)) stats::median(z$n_joint) else NA_real_,
+      median_joint_coverage = if (nrow(z)) {
+        stats::median(z$joint_coverage)
+      } else {
+        NA_real_
+      },
+      median_ari = if (length(finite_ari)) stats::median(finite_ari) else NA_real_,
+      ari_q025 = interval[[1L]],
+      ari_q975 = interval[[2L]],
+      median_ami = if (length(finite_ami)) stats::median(finite_ami) else NA_real_,
+      ami_q025 = ami_interval[[1L]],
+      ami_q975 = ami_interval[[2L]],
+      stringsAsFactors = FALSE
     )
-  }
+  }))
+  rownames(stability) <- NULL
 
   structure(
     list(
       records = records, pairwise = pairwise_table, stability = stability,
-      method = method, scope = scope, ensemble = ensemble
+      method = method, scope = scope,
+      max_pairwise_comparisons = as.integer(max_pairwise_comparisons),
+      ensemble = ensemble
     ),
     class = "som_partitions"
   )

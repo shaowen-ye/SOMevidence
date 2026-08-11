@@ -61,3 +61,9 @@ A \code{som_spec} object.
 \description{
 Specify a reproducible SOM ensemble
 }
+\examples{
+specification <- som_spec(
+  grids = list(c(4, 3), c(5, 4)), seeds = 1:2, rlen = 50, k = 2:4
+)
+expand_som_spec(specification)
+}
