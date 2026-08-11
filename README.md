@@ -3,7 +3,7 @@
 [![R-universe version](https://shaowen-ye.r-universe.dev/badges/SOMevidence)](https://shaowen-ye.r-universe.dev/SOMevidence)
 [![R-CMD-check](https://github.com/shaowen-ye/SOMevidence/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/shaowen-ye/SOMevidence/actions/workflows/R-CMD-check.yaml)
 [![Test coverage](https://github.com/shaowen-ye/SOMevidence/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/shaowen-ye/SOMevidence/actions/workflows/test-coverage.yaml)
-[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
+![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)
 
 `SOMevidence` is an R package for auditing whether classifications derived from
 self-organizing maps (SOMs) meet prespecified evidence requirements under an

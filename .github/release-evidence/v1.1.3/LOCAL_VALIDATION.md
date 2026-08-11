@@ -42,7 +42,7 @@ performance measurements. Remote build identity is verified after release.
 ## Source-archive review
 
 - Candidate archive: `SOMevidence_1.1.3.tar.gz`.
-- SHA-256: `dd20543435d185ec362480fc0ab8fff972c5c892ee8fae08ea890067b09daeb6`.
+- SHA-256: `782bd63dca0ae90b09b262eea116279a3ecc741b0123fca820a5cc80e6b914a0`.
 - Gzip integrity, archive listing, extraction and package metadata checks
   passed.
 - The archive contained no local absolute paths, credentials, repository
