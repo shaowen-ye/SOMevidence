@@ -24,5 +24,10 @@ jobs:
           extra-packages: any::lintr
           needs: lint
       - name: Lint package
-        run: lintr::lint_package(error_on_lint = TRUE)
+        run: |
+          lints <- lintr::lint_package()
+          print(lints)
+          if (length(lints)) {
+            stop(sprintf("Found %d lint finding(s).", length(lints)))
+          }
         shell: Rscript {0}
