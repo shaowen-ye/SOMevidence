@@ -35,6 +35,40 @@
   total
 }
 
+.som_grid_adjacency <- function(grid) {
+  valid_dimension <- function(value) {
+    is.numeric(value) && length(value) == 1L && !is.na(value) &&
+      is.finite(value) && value %% 1 == 0 && value >= 1L
+  }
+  if (!inherits(grid, "somgrid") || !is.matrix(grid$pts) ||
+        !is.numeric(grid$pts) || ncol(grid$pts) != 2L ||
+        nrow(grid$pts) < 2L || any(!is.finite(grid$pts)) ||
+        anyDuplicated(data.frame(grid$pts)) ||
+        !valid_dimension(grid$xdim) || !valid_dimension(grid$ydim) ||
+        grid$xdim * grid$ydim != nrow(grid$pts) ||
+        !is.character(grid$topo) || length(grid$topo) != 1L ||
+        is.na(grid$topo) ||
+        !grid$topo %in% c("rectangular", "hexagonal") ||
+        !is.logical(grid$toroidal) || length(grid$toroidal) != 1L ||
+        is.na(grid$toroidal)) {
+    .abort("A SOM grid must contain at least two finite two-dimensional units.")
+  }
+  local_distance <- kohonen::unit.distances(grid, toroidal = FALSE)
+  positive_local <- local_distance[
+    is.finite(local_distance) & local_distance > 0
+  ]
+  if (!length(positive_local)) {
+    .abort("A SOM grid needs at least two distinct units.")
+  }
+  edge_length <- min(positive_local)
+  grid_distance <- kohonen::unit.distances(grid)
+  adjacency <- grid_distance > 0 &
+    grid_distance <= edge_length * (1 + 1e-8)
+  adjacency <- adjacency | t(adjacency)
+  diag(adjacency) <- FALSE
+  adjacency
+}
+
 .topographic_error <- function(fit, rows) {
   if (!isTRUE(fit$success)) {
     return(NA_real_)
@@ -43,15 +77,13 @@
   if (ncol(distance_matrix) < 2L) {
     return(NA_real_)
   }
-  unit_distance <- kohonen::unit.distances(fit$grid)
-  positive <- unit_distance[unit_distance > 0]
-  adjacency_limit <- min(positive) * (1 + 1e-8)
+  adjacency <- .som_grid_adjacency(fit$grid)
   errors <- apply(distance_matrix, 1L, function(d) {
     if (sum(is.finite(d)) < 2L) {
       return(NA_real_)
     }
     nearest <- order(d)[1:2]
-    as.numeric(unit_distance[nearest[1L], nearest[2L]] > adjacency_limit)
+    as.numeric(!adjacency[nearest[1L], nearest[2L]])
   })
   mean(errors, na.rm = TRUE)
 }
@@ -84,7 +116,7 @@ audit_som <- function(ensemble) {
       median_topographic_error = numeric(),
       median_empty_unit_rate = numeric(), stringsAsFactors = FALSE
     )
-    return(structure(
+    return(.new_som_object(
       list(
         fit_metrics = fit_metrics,
         grid_summary = grid_summary,
@@ -92,7 +124,7 @@ audit_som <- function(ensemble) {
         failures = ensemble$failures,
         ensemble = ensemble
       ),
-      class = "som_audit"
+      "som_audit"
     ))
   }
 
@@ -137,7 +169,7 @@ audit_som <- function(ensemble) {
 
   grid_summary <- do.call(rbind, summary_rows)
   rownames(grid_summary) <- NULL
-  structure(
+  .new_som_object(
     list(
       fit_metrics = fit_metrics,
       grid_summary = grid_summary,
@@ -145,7 +177,7 @@ audit_som <- function(ensemble) {
       failures = ensemble$failures,
       ensemble = ensemble
     ),
-    class = "som_audit"
+    "som_audit"
   )
 }
 
@@ -322,7 +354,7 @@ partition_som <- function(
   k <- sort(unique(as.integer(k)))
   successful <- Filter(function(x) isTRUE(x$success), ensemble$fits)
   if (!length(successful)) {
-    return(structure(
+    return(.new_som_object(
       list(
         records = list(),
         pairwise = data.frame(
@@ -343,9 +375,10 @@ partition_som <- function(
         method = method,
         partition_method = method,
         scope = scope,
+        max_pairwise_comparisons = as.integer(max_pairwise_comparisons),
         ensemble = ensemble
       ),
-      class = "som_partitions"
+      "som_partitions"
     ))
   }
   unit_counts <- vapply(successful, function(fit) {
@@ -496,14 +529,14 @@ partition_som <- function(
   }))
   rownames(stability) <- NULL
 
-  structure(
+  .new_som_object(
     list(
       records = records, pairwise = pairwise_table, stability = stability,
       method = method, partition_method = method, scope = scope,
       max_pairwise_comparisons = as.integer(max_pairwise_comparisons),
       ensemble = ensemble
     ),
-    class = "som_partitions"
+    "som_partitions"
   )
 }
 

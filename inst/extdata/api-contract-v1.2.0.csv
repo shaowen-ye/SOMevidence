@@ -1,0 +1,26 @@
+function,category,lifecycle,return_class,arguments,notes
+assess_defensibility,evidence_decision,stable,som_defensibility,audit|partitions|k|gate|consensus|cross_model,Evaluates analyst-specified gates without producing a composite score.
+audit_som,representation_evidence,stable,som_audit,ensemble,Summarises fit success and within-fit representation diagnostics across the ensemble.
+audit_som_representation,representation_reproducibility,experimental,som_representation_audit,ensemble|scope|neighbourhood_size|pairs|max_pairwise_comparisons|max_sample_pairs|fail_fast,Reports exact cross-fit topology reproducibility under explicit computation budgets without ranking or selecting models.
+audit_transfer,transfer_evidence,stable,som_transfer_audit,ensemble,Describes held-out-domain mapping behaviour and explicit mapping coverage.
+compare_cross_models,cross_model_evidence,stable,som_cross_comparison,partitions|cross_models|scope,Reports agreement effect sizes and intervals rather than a model ranking.
+consensus_som,partition_evidence,stable,som_consensus,partitions|k|linkage|method|max_coassignment_n,Builds sample-level consensus for one prespecified candidate k.
+evaluate_external_labels,external_validation,stable,som_external_assessment,consensus|labels|exclude|label_ids|match_by,Aligns external labels by validated identity and reports mutually exclusive omission accounting.
+expand_som_spec,model_design,stable,data.frame,spec,Expands the deterministic grid-by-seed design table.
+fit_cross_models,cross_model_evidence,stable,som_cross_models,ensemble|methods|k|kmeans_seeds|kmeans_nstart|kmeans_iter_max|gmm_model_names|keep_models|fail_fast|gmm_seed,Fits controlled reference partitions with explicit prediction rules and reproducible GMM initialization.
+fit_som_ensemble,model_fitting,stable,som_ensemble,data|spec|resamples|preprocess|keep_models|fail_fast|parallel,Fits split-specific preprocessing and SOM members with explicit failures and warnings.
+launch_som_app,interactive_interface,experimental,shiny.appobj,,Returns an optional Shiny application; the exported R script remains the executable analysis record.
+map_som_ensemble,transfer_evidence,stable,som_newdata_mapping,ensemble|new_data|fail_fast,Maps compatible new observations through retained fitted ensemble members.
+open_data_registry,data_governance,stable,data.frame,role|domain,Returns governed metadata and provenance for curated external demonstration sources.
+pareto_candidates,evidence_selection,stable,data.frame,x|metrics,Identifies non-dominated candidates without collapsing evidence into one score.
+partition_som,partition_evidence,stable,som_partitions,ensemble|k|method|scope|max_pairwise_comparisons,Creates candidate hard partitions with explicit model-pair computation budgets.
+plot_som_plane,visualisation,stable,ggplot,x|type|fit_id|layer|variables,Returns an editable component-plane or distance plot.
+run_som_sensitivity,workflow,experimental,som_sensitivity,scenarios|cross_models|cross_model_control|consensus_method|max_coassignment_n|max_pairwise_comparisons|sample_profiles|keep_workflows|fail_fast,Preserves scenario-level and model-stage failures even when full workflows are omitted.
+run_som_workflow,workflow,stable,som_workflow,data|spec|resamples|preprocess|k|cross_models|cross_model_control|consensus_method|max_coassignment_n|keep_models|fail_fast|parallel|max_pairwise_comparisons,Orchestrates separate evidence streams without selecting a winning k or method.
+simulate_som_scenario,validation_data,experimental,som_data,scenario|n|p|seed|noise_sd|class_probs|n_groups|group_icc|n_domains|domain_shift|missing_rate|missing_mechanism|id,Research and teaching utility whose scenario catalogue may expand.
+som_data,data_contract,stable,som_data,x|layers|id|group|time|domain|weight|external_label,Separates training layers from metadata and aligns named external labels by sample identity.
+som_gate,evidence_decision,stable,som_gate,max_topographic_error|max_empty_unit_rate|min_median_ari|min_median_ami|min_pairwise_coverage|min_cluster_jaccard|min_consensus_coverage|min_replicated_coverage|min_membership_support|max_assignment_entropy|min_cross_model_ari|min_cross_model_methods|min_success_rate,Stores explicit analyst-specified decision thresholds; none are universal defaults.
+som_preprocess,preprocessing,stable,som_preprocess,transform|center|scale|zero_replacement,Defines training-estimated transformations and excludes training-constant variables from distance.
+som_resamples,sampling_design,stable,som_resamples,data|method|repeats|prop|seed|unit|domain|splits,Binds resampling indices to ordered sample identifiers and validates unique split IDs.
+som_spec,model_design,stable,som_spec,grids|seeds|rlen|alpha|radius|topology|neighbourhood|toroidal|mode|k|max_na_fraction|layer_weights|normalize_layers|cores,Defines the prespecified SOM ensemble design and computational budget.
+upgrade_som_object,object_lifecycle,stable,same_public_som_class,x,Applies deterministic structural migrations without refitting models or inventing evidence.

@@ -37,14 +37,14 @@ som_preprocess <- function(
       lower = .Machine$double.eps
     )
   }
-  structure(
+  .new_som_object(
     list(
       transform = transform,
       center = center,
       scale = scale,
       zero_replacement = zero_replacement
     ),
-    class = "som_preprocess"
+    "som_preprocess"
   )
 }
 

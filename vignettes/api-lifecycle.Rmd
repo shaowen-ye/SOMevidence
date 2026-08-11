@@ -19,11 +19,12 @@ analysis even when a function retains the same name. The package therefore
 ships machine-readable contracts for both exported functions and returned
 objects.
 
-The version 1.0.0 contracts remain the structural compatibility baseline. The
-current 1.1.0 contracts describe additive interfaces and scientific
-corrections that make previously implicit safeguards observable. Structural
-compatibility does not imply that an analysis which omits version-sensitive
-defaults will be numerically identical across releases.
+The version 1.0.0 contracts remain the structural compatibility baseline, and
+the version 1.1.0 contracts remain unchanged as a historical release record.
+The current 1.2.0 contracts add exact default-expression records and structural
+contract versions for public result objects. Structural compatibility does not
+imply that an analysis which omits version-sensitive defaults will be
+numerically identical across releases.
 
 ```{r contracts}
 contract_path <- function(name) {
@@ -35,23 +36,50 @@ baseline_api <- utils::read.csv(
   check.names = FALSE
 )
 api_contract <- utils::read.csv(
-  contract_path("api-contract-v1.1.0.csv"),
+  contract_path("api-contract-v1.2.0.csv"),
+  check.names = FALSE
+)
+api_formals <- utils::read.csv(
+  contract_path("api-formals-v1.2.0.csv"),
   check.names = FALSE
 )
 object_contract <- utils::read.csv(
-  contract_path("object-contract-v1.1.0.csv"),
+  contract_path("object-contract-v1.2.0.csv"),
+  check.names = FALSE
+)
+migrations <- utils::read.csv(
+  contract_path("object-migrations-v1.2.0.csv"),
   check.names = FALSE
 )
 
 c(baseline_exports = nrow(baseline_api), current_exports = nrow(api_contract))
 table(api_contract$lifecycle)
 head(object_contract[c("class", "lifecycle")])
+head(migrations[c("class", "automatic")])
 ```
 
-Automated tests require all baseline arguments to remain present and in their
-original order. They also compare the current namespace, complete function
-formals, key defaults, return classes, object components, and selected evidence
-table schemas with the 1.1.0 contracts.
+Automated tests require all historical stable arguments to remain present as
+an order-preserving prefix. They also compare the current namespace, complete
+function formals and defaults, return classes, object components, required
+attributes, and selected evidence-table schemas with the 1.2.0 contracts.
+
+## What changed in the 1.2.0 contract
+
+The current contract adds three linked safeguards:
+
+- external labels can be joined by validated sample identity, with explicit
+  record states for absent, missing, excluded, unassigned and insufficiently
+  replicated observations;
+- every public result object records `som_contract_version = "1.2.0"`, and
+  `upgrade_som_object()` performs only deterministic migrations supported by
+  retained evidence; and
+- experimental `audit_som_representation()` compares continuous topology
+  across prespecified fit pairs through shortest-hop grid distances and
+  optional tie-preserving neighbourhood overlap.
+
+The representation audit uses exact fit-pair and sample-pair budgets. It has no
+score, rank, default scientific threshold or automatic selection rule, and it
+cannot be passed to `assess_defensibility()` as hard-partition evidence.
 
 ## What changed in the 1.1.0 contract
 
@@ -107,7 +135,7 @@ guarantee, requires a new major package version. Analysis-affecting default
 changes must be explicit in a versioned contract and release notes; publication
 workflows should still record every consequential setting directly.
 
-Three interfaces remain experimental:
+Four interfaces remain experimental:
 
 ```{r experimental}
 api_contract[api_contract$lifecycle == "experimental",
@@ -121,14 +149,17 @@ remains on the local computer; in a remotely deployed app, Shiny transfers it
 to that host. Its YAML export is a configuration snapshot. The exported R
 script can be rerun, but it becomes part of a reproducible record only when
 retained with the exact input, software versions, warnings, failures, and
-results. The sensitivity and simulation interfaces also remain experimental
-because their scenario descriptions may evolve after broader use.
+results. The sensitivity, simulation and continuous-representation audit
+interfaces also remain experimental because their scenario descriptions or
+reporting structures may evolve after broader use.
 
 ## Object boundaries are scientific boundaries
 
 The returned classes keep distinct questions apart:
 
 - `som_audit` concerns representation quality;
+- `som_representation_audit` concerns exact cross-fit topology concordance,
+  not map selection or partition defensibility;
 - `som_partitions` and `som_consensus` concern analysis-scope hard-partition
   stability;
 - `som_cross_comparison` concerns algorithmic agreement;
@@ -163,3 +194,13 @@ For work intended to support a publication, also retain the exact data
 provenance, stable sample identifiers, preprocessing specification, random
 seeds, model failures, warnings, model budget, and API contract version used by
 the analysis.
+
+The structural object contract is distinct from analysis provenance. It tells
+software which fields are present; it does not identify the package build,
+algorithm version or scientific choices that created those fields. If an older
+object lacks evidence required by the current contract, recomputation is safer
+than migration:
+
+```r
+upgraded <- upgrade_som_object(saved_result)
+```

@@ -43,10 +43,9 @@ test_that("version 1.0.0 function and argument contracts remain compatible", {
   )
 })
 
-test_that("version 1.1.0 exports and arguments match the current contract", {
+test_that("version 1.1.0 exports and arguments remain compatible", {
   api <- read_contract("api-contract-v1.1.0.csv")
-  expect_setequal(getNamespaceExports("SOMevidence"), api[["function"]])
-  expect_equal(length(getNamespaceExports("SOMevidence")), nrow(api))
+  expect_true(all(api[["function"]] %in% getNamespaceExports("SOMevidence")))
 
   for (i in seq_len(nrow(api))) {
     function_name <- api[["function"]][[i]]
@@ -58,7 +57,20 @@ test_that("version 1.1.0 exports and arguments match the current contract", {
     }
     observed <- names(formals(getExportedValue("SOMevidence", function_name)))
     if (is.null(observed)) observed <- character()
-    expect_identical(observed, expected, info = function_name)
+    if (api$lifecycle[[i]] == "stable") {
+      expect_true(
+        length(observed) >= length(expected),
+        info = function_name
+      )
+      expect_identical(
+        observed[seq_along(expected)], expected,
+        info = function_name
+      )
+    } else {
+      positions <- match(expected, observed)
+      expect_false(anyNA(positions), info = function_name)
+      expect_identical(positions, sort(positions), info = function_name)
+    }
   }
 
   expect_identical(
@@ -69,6 +81,58 @@ test_that("version 1.1.0 exports and arguments match the current contract", {
   expect_identical(
     api$return_class[api[["function"]] == "launch_som_app"],
     "shiny.appobj"
+  )
+})
+
+test_that("version 1.2.0 exports formals and defaults match exactly", {
+  api <- read_contract("api-contract-v1.2.0.csv")
+  defaults <- read_contract("api-formals-v1.2.0.csv")
+  exports <- getNamespaceExports("SOMevidence")
+  expect_setequal(exports, api[["function"]])
+  expect_identical(defaults[["function"]], api[["function"]])
+
+  normalise_default <- function(value) {
+    if (identical(value, quote(expr = ))) return("<required>")
+    paste(deparse(value, width.cutoff = 500L), collapse = " ")
+  }
+  for (i in seq_len(nrow(api))) {
+    function_name <- api[["function"]][[i]]
+    expected_arguments <- api$arguments[[i]]
+    expected_arguments <- if (
+      is.na(expected_arguments) || !nzchar(expected_arguments)
+    ) {
+      character()
+    } else {
+      strsplit(expected_arguments, "|", fixed = TRUE)[[1L]]
+    }
+    function_formals <- formals(
+      getExportedValue("SOMevidence", function_name)
+    )
+    observed_arguments <- names(function_formals)
+    if (is.null(observed_arguments)) observed_arguments <- character()
+    expect_identical(
+      observed_arguments, expected_arguments, info = function_name
+    )
+
+    expected_defaults <- defaults$defaults[[i]]
+    expected_defaults <- if (
+      is.na(expected_defaults) || !nzchar(expected_defaults)
+    ) {
+      character()
+    } else {
+      strsplit(expected_defaults, "|", fixed = TRUE)[[1L]]
+    }
+    observed_defaults <- vapply(
+      function_formals, normalise_default, character(1)
+    )
+    expect_identical(
+      unname(observed_defaults), expected_defaults, info = function_name
+    )
+  }
+
+  expect_identical(
+    api$lifecycle[api[["function"]] == "audit_som_representation"],
+    "experimental"
   )
 })
 
@@ -171,4 +235,39 @@ test_that("version 1.0.0 objects satisfy their structural contract", {
     "analysis_mapping_coverage", "assessment_mapping_coverage"
   ) %in% names(transfer$metrics)))
   expect_true("mapping_coverage" %in% names(mapping$summary))
+
+  representation <- audit_som_representation(
+    workflow$ensemble,
+    pairs = data.frame(
+      fit_a = workflow$ensemble$fits[[1L]]$id,
+      fit_b = workflow$ensemble$fits[[2L]]$id
+    )
+  )
+  current_objects <- c(
+    objects,
+    list(som_representation_audit = representation)
+  )
+  version_12_contract <- read_contract("object-contract-v1.2.0.csv")
+  expect_setequal(names(current_objects), version_12_contract$class)
+  expect_true(all(version_12_contract$contract_version == "1.2.0"))
+  expect_true(all(
+    version_12_contract$required_attributes ==
+      "som_contract_version=1.2.0"
+  ))
+  for (i in seq_len(nrow(version_12_contract))) {
+    class_name <- version_12_contract$class[[i]]
+    object <- current_objects[[class_name]]
+    required <- strsplit(
+      version_12_contract$required_components[[i]], "|", fixed = TRUE
+    )[[1L]]
+    expect_s3_class(object, class_name)
+    expect_true(
+      all(required %in% names(object)),
+      info = paste(
+        class_name, "missing",
+        paste(setdiff(required, names(object)), collapse = ", ")
+      )
+    )
+    expect_identical(attr(object, "som_contract_version"), "1.2.0")
+  }
 })

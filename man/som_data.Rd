@@ -34,7 +34,9 @@ are retained only as metadata in the current release. They are not used
 in SOM training, evidence metrics or design summaries.}
 
 \item{external_label}{Optional external ecological labels. They are retained
-for post hoc assessment and never added to the training layers.}
+for post hoc assessment and never added to the training layers. A fully
+named vector is aligned to \code{id}; partial, duplicate or unmatched label IDs
+are rejected. An unnamed vector is interpreted positionally.}
 }
 \value{
 An object of class \code{som_data}. Named multi-layer inputs are aligned

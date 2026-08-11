@@ -255,7 +255,7 @@ fit_som_ensemble <- function(data, spec, resamples = NULL,
     )
   }
 
-  structure(
+  .new_som_object(
     list(
       data = data,
       spec = spec,
@@ -267,7 +267,7 @@ fit_som_ensemble <- function(data, spec, resamples = NULL,
       expected_models = length(fits),
       parallel = parallel
     ),
-    class = "som_ensemble"
+    "som_ensemble"
   )
 }
 

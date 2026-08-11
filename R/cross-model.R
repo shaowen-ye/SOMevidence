@@ -329,7 +329,7 @@ fit_cross_models <- function(
       warning = character(), stringsAsFactors = FALSE
     )
   }
-  structure(
+  .new_som_object(
     list(
       records = records,
       failures = failure_table,
@@ -338,7 +338,7 @@ fit_cross_models <- function(
       k = sort(unique(as.integer(k))),
       ensemble = ensemble
     ),
-    class = "som_cross_models"
+    "som_cross_models"
   )
 }
 
@@ -500,7 +500,7 @@ compare_cross_models <- function(
   partition_completeness <- partitions$stability[
     , completeness_columns, drop = FALSE
   ]
-  structure(
+  .new_som_object(
     list(
       comparisons = comparisons,
       summary = summary,
@@ -514,7 +514,7 @@ compare_cross_models <- function(
       scope = scope,
       ensemble = partitions$ensemble
     ),
-    class = "som_cross_comparison"
+    "som_cross_comparison"
   )
 }
 

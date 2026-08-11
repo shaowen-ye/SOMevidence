@@ -318,6 +318,16 @@ consensus_som <- function(
   }
   n <- unique(vapply(records, function(x) length(x$sample_labels), integer(1)))
   if (length(n) != 1L) .abort("All partitions must describe the same samples.")
+  sample_ids <- partitions$ensemble$data$metadata$id
+  if (length(sample_ids) != n || anyNA(sample_ids) ||
+        any(!nzchar(trimws(as.character(sample_ids)))) ||
+        anyDuplicated(sample_ids)) {
+    .abort(paste0(
+      "The originating ensemble does not provide one unique, non-empty ",
+      "sample ID per consensus row."
+    ))
+  }
+  sample_ids <- as.character(sample_ids)
   incomplete <- any(vapply(
     records, function(record) anyNA(record$sample_labels), logical(1)
   ))
@@ -453,7 +463,7 @@ consensus_som <- function(
     )
   }))
 
-  structure(
+  .new_som_object(
     list(
       k = as.integer(k),
       method = selected_method,
@@ -474,12 +484,13 @@ consensus_som <- function(
       alignment_diagnostics = alignment_diagnostics,
       clusterwise_jaccard = jaccard,
       cluster_summary = cluster_summary,
+      sample_ids = sample_ids,
       metadata = partitions$ensemble$data$metadata,
       records = records,
       partition_method = partitions$partition_method %||% partitions$method,
       ensemble = partitions$ensemble
     ),
-    class = "som_consensus"
+    "som_consensus"
   )
 }
 

@@ -76,7 +76,7 @@ som_gate <- function(max_topographic_error = NULL,
       .abort("`min_cross_model_methods` must be an integer.")
     }
   }
-  structure(values, class = "som_gate")
+  .new_som_object(values, "som_gate")
 }
 
 #' @export
@@ -554,9 +554,9 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
     }
   }
 
-  structure(
+  .new_som_object(
     list(status = status, k = k, evidence = evidence, checks = checks),
-    class = "som_defensibility"
+    "som_defensibility"
   )
 }
 

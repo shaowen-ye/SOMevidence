@@ -1,3 +1,28 @@
+# SOMevidence 1.2.0
+
+## Identity-safe evidence and durable results
+
+- Aligns supplied external labels by validated sample identity, while retaining
+  an explicitly warned positional compatibility path for unnamed legacy input.
+- Reports mutually exclusive record-level accounting for label availability,
+  exclusions, consensus coverage and replication support.
+- Adds versioned structural contracts to public result objects and a
+  deterministic `upgrade_som_object()` path for migrations that can be made
+  without refitting models or reconstructing scientific evidence.
+
+## Continuous-representation reproducibility
+
+- Adds experimental `audit_som_representation()` diagnostics for within-scope
+  quantization, topology, occupancy and mapping coverage across SOM fits.
+- Compares prespecified fit pairs through shortest-hop grid distances and,
+  when requested, tie-preserving local-neighbourhood overlap.
+- Uses exact calculations under explicit fit-pair and sample-pair budgets and
+  returns descriptive evidence without a score, ranking or automatic model
+  selection rule.
+- Preserves the pairwise-comparison budget in partition results even when all
+  requested SOM fits fail, keeping successful and unsuccessful runs under one
+  result contract.
+
 # SOMevidence 1.1.3
 
 ## Performance and regression assurance

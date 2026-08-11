@@ -11,7 +11,9 @@
 #'   are retained only as metadata in the current release. They are not used
 #'   in SOM training, evidence metrics or design summaries.
 #' @param external_label Optional external ecological labels. They are retained
-#'   for post hoc assessment and never added to the training layers.
+#'   for post hoc assessment and never added to the training layers. A fully
+#'   named vector is aligned to `id`; partial, duplicate or unmatched label IDs
+#'   are rejected. An unnamed vector is interpreted positionally.
 #'
 #' @return An object of class `som_data`. Named multi-layer inputs are aligned
 #'   to the first layer by row name when all layers provide row names;
@@ -143,6 +145,28 @@ som_data <- function(x = NULL, layers = NULL, id = NULL, group = NULL,
   weight <- check_length(weight, "weight")
   external_label <- check_length(external_label, "external_label")
 
+  external_label_source <- if (is.null(external_label)) {
+    "none"
+  } else if (is.null(names(external_label))) {
+    "position"
+  } else {
+    "named_id"
+  }
+  if (identical(external_label_source, "named_id")) {
+    external_ids <- as.character(names(external_label))
+    if (length(external_ids) != n || anyNA(external_ids) ||
+          any(!nzchar(trimws(external_ids))) || anyDuplicated(external_ids)) {
+      .abort(paste0(
+        "Named `external_label` values must have one unique, non-empty ",
+        "sample ID per label."
+      ))
+    }
+    if (!setequal(external_ids, id)) {
+      .abort("Named `external_label` IDs must match `id` exactly.")
+    }
+    external_label <- external_label[match(id, external_ids)]
+  }
+
   if (!is.null(weight) &&
         (!is.numeric(weight) || anyNA(weight) || any(!is.finite(weight)) ||
            any(weight < 0))) {
@@ -156,9 +180,14 @@ som_data <- function(x = NULL, layers = NULL, id = NULL, group = NULL,
   if (!is.null(weight)) metadata$weight <- weight
   if (!is.null(external_label)) metadata$external_label <- external_label
 
-  structure(
-    list(layers = layers, metadata = metadata, id_source = id_source),
-    class = "som_data"
+  .new_som_object(
+    list(
+      layers = layers,
+      metadata = metadata,
+      id_source = id_source,
+      external_label_source = external_label_source
+    ),
+    "som_data"
   )
 }
 

@@ -177,7 +177,7 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
     )
   }
 
-  structure(
+  .new_som_object(
     list(
       records = records,
       summary = summary,
@@ -186,7 +186,7 @@ map_som_ensemble <- function(ensemble, new_data, fail_fast = FALSE) {
       metadata = new_data$metadata,
       n_expected_fits = length(successful)
     ),
-    class = "som_newdata_mapping"
+    "som_newdata_mapping"
   )
 }
 
