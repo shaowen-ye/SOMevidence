@@ -66,7 +66,11 @@
 
 
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
-<dd><p>Optional unique sample identifiers.</p></dd>
+<dd><p>Optional unique sample identifiers. Supplying <code>id</code> explicitly is
+recommended for scientific analyses. If it is omitted, informative row
+names are used unless every row name follows the package-like
+<code>sample_&lt;integer&gt;</code> or <code>simulation_&lt;integer&gt;</code> pattern; such fully generic
+sequences are treated as generated rather than independently stable.</p></dd>
 
 
 <dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
@@ -104,7 +108,9 @@ changes its row order. If no layers have usable row names, their existing
 row order is treated as authoritative. The scalar <code>id_source</code> records
 whether sample identifiers were supplied, taken from explicit
 non-positional row names or generated locally. Stable identifiers are
-required to compare different data-coverage scenarios.</p>
+required to compare different data-coverage scenarios. A mixture of
+generic and study-specific row names is retained as explicit identity;
+one generic name does not cause the remaining row names to be discarded.</p>
     </div>
 
     <div class="section level2">

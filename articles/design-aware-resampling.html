@@ -190,7 +190,11 @@ comparable distances and on units occupied during training?</p>
 <p>The distance ratio and unoccupied-unit rate diagnose domain shift.
 They are not accuracy statistics, because an unsupervised map has no
 response label to predict. They also do not establish a causal
-explanation for the shift.</p>
+explanation for the shift. In this teaching generator, the domains
+occupy successive ranges of the latent gradient and
+<code>domain_shift</code> adds a domain-specific offset. The example
+therefore combines range extrapolation with an additive shift; it is not
+an isolated test of either mechanism.</p>
 </div>
 <div class="section level2">
 <h2 id="map-a-later-monitoring-batch-without-refitting">Map a later monitoring batch without refitting<a class="anchor" aria-label="anchor" href="#map-a-later-monitoring-batch-without-refitting"></a>

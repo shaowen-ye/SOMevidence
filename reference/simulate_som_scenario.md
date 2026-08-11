@@ -60,8 +60,11 @@ simulate_som_scenario(
 
 - group_icc:
 
-  Target intraclass correlation induced by the simulated group effect.
-  Used only for `"grouped_pseudoreplication"`.
+  Conditional within-class intraclass correlation induced by the
+  simulated group effect, before any optional domain shift or
+  missingness. This is not the marginal correlation after variation
+  among generated class centres is included. Used only for
+  `"grouped_pseudoreplication"`.
 
 - n_domains:
 
@@ -72,16 +75,26 @@ simulate_som_scenario(
 - domain_shift:
 
   Magnitude of an additive domain-specific shift applied to the first
-  two variables. Zero creates no additional domain shift.
+  two variables. Zero creates no additional additive shift. In the
+  gradient scenario, domains already occupy successive ranges of the
+  latent gradient, so a held-domain contrast combines range
+  extrapolation with any requested additive shift.
 
 - missing_rate:
 
-  Expected fraction of entries set to missing.
+  Missingness-intensity control. Under `"mcar"`, this is the entry-level
+  masking probability before minimum-observation safeguards. Under
+  `"domain"`, entries in the final domain use
+  `min(0.95, 2 * missing_rate)` and other domains use
+  `missing_rate / 3`. The realised fraction is recorded in
+  `simulation_spec$missing_rate_realized`.
 
 - missing_mechanism:
 
-  One of `"none"`, `"mcar"` or `"domain"`. Domain missingness is
-  concentrated in the final sampling domain.
+  One of `"none"`, `"mcar"` or `"domain"`. The `"domain"` mechanism
+  concentrates masking in the final sampling domain; it is a controlled
+  domain-dependent pattern, not a claim about an inferential MCAR, MAR
+  or MNAR mechanism.
 
 - id:
 
@@ -95,6 +108,20 @@ A `som_data` object with additional `truth` and `simulation_spec`
 components. Known latent variables and labels are never included in the
 training layers. Discrete labels are also copied to `external_label` for
 post hoc agreement assessment.
+
+## Details
+
+The scenario catalogue is deliberately compact. `"gradient"` generates a
+one-dimensional linear latent gradient. `"clusters"` and `"overlap"` use
+three spherical Gaussian classes with larger and smaller centre
+separation, respectively. `"grouped_pseudoreplication"` assigns one
+generated class and one random effect to every sampling group;
+`class_probs` therefore controls group-class allocation before the
+approximately balanced group sizes are expanded to rows.
+`"multilayer_conflict"` combines one class-structured layer with a
+row-permuted, noise-perturbed copy. These teaching scenarios do not span
+nonlinear gradients, anisotropic or heavy-tailed clusters, or all
+ecological dependence and missingness mechanisms.
 
 ## Lifecycle
 

@@ -96,8 +96,11 @@ six observations, with a minimum of 10 groups.</p></dd>
 
 
 <dt id="arg-group-icc">group_icc<a class="anchor" aria-label="anchor" href="#arg-group-icc"></a></dt>
-<dd><p>Target intraclass correlation induced by the simulated
-group effect. Used only for <code>"grouped_pseudoreplication"</code>.</p></dd>
+<dd><p>Conditional within-class intraclass correlation induced by
+the simulated group effect, before any optional domain shift or
+missingness. This is not the marginal correlation after variation among
+generated class centres is included. Used only for
+<code>"grouped_pseudoreplication"</code>.</p></dd>
 
 
 <dt id="arg-n-domains">n_domains<a class="anchor" aria-label="anchor" href="#arg-n-domains"></a></dt>
@@ -108,16 +111,26 @@ when <code>domain_shift &gt; 0</code> or <code>missing_mechanism = "domain"</cod
 
 <dt id="arg-domain-shift">domain_shift<a class="anchor" aria-label="anchor" href="#arg-domain-shift"></a></dt>
 <dd><p>Magnitude of an additive domain-specific shift applied
-to the first two variables. Zero creates no additional domain shift.</p></dd>
+to the first two variables. Zero creates no additional additive shift. In
+the gradient scenario, domains already occupy successive ranges of the
+latent gradient, so a held-domain contrast combines range extrapolation
+with any requested additive shift.</p></dd>
 
 
 <dt id="arg-missing-rate">missing_rate<a class="anchor" aria-label="anchor" href="#arg-missing-rate"></a></dt>
-<dd><p>Expected fraction of entries set to missing.</p></dd>
+<dd><p>Missingness-intensity control. Under <code>"mcar"</code>, this is
+the entry-level masking probability before minimum-observation safeguards.
+Under <code>"domain"</code>, entries in the final domain use
+<code>min(0.95, 2 * missing_rate)</code> and other domains use
+<code>missing_rate / 3</code>. The realised fraction is recorded in
+<code>simulation_spec$missing_rate_realized</code>.</p></dd>
 
 
 <dt id="arg-missing-mechanism">missing_mechanism<a class="anchor" aria-label="anchor" href="#arg-missing-mechanism"></a></dt>
-<dd><p>One of <code>"none"</code>, <code>"mcar"</code> or <code>"domain"</code>. Domain
-missingness is concentrated in the final sampling domain.</p></dd>
+<dd><p>One of <code>"none"</code>, <code>"mcar"</code> or <code>"domain"</code>. The
+<code>"domain"</code> mechanism concentrates masking in the final sampling domain;
+it is a controlled domain-dependent pattern, not a claim about an
+inferential MCAR, MAR or MNAR mechanism.</p></dd>
 
 
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
@@ -131,6 +144,19 @@ constructed simulated objects will be compared in a sensitivity workflow.</p></d
 components. Known latent variables and labels are never included in the
 training layers. Discrete labels are also copied to <code>external_label</code> for
 post hoc agreement assessment.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>The scenario catalogue is deliberately compact. <code>"gradient"</code> generates a
+one-dimensional linear latent gradient. <code>"clusters"</code> and <code>"overlap"</code> use
+three spherical Gaussian classes with larger and smaller centre separation,
+respectively. <code>"grouped_pseudoreplication"</code> assigns one generated class and
+one random effect to every sampling group; <code>class_probs</code> therefore controls
+group-class allocation before the approximately balanced group sizes are
+expanded to rows. <code>"multilayer_conflict"</code> combines one class-structured
+layer with a row-permuted, noise-perturbed copy. These teaching scenarios do
+not span nonlinear gradients, anisotropic or heavy-tailed clusters, or all
+ecological dependence and missingness mechanisms.</p>
     </div>
     <div class="section level2">
     <h2 id="lifecycle">Lifecycle<a class="anchor" aria-label="anchor" href="#lifecycle"></a></h2>
