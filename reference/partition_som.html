@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,7 +80,9 @@ against quadratic growth in the number of ensemble members.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>som_partitions</code> object. Agreement is reported as ARI, not accuracy.</p>
+    <p>A <code>som_partitions</code> object. Agreement is reported as ARI and AMI,
+not accuracy. AMI is chance-adjusted and normalized by the arithmetic mean
+of the two partition entropies.</p>
     </div>
 
     <div class="section level2">

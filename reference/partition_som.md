@@ -44,7 +44,9 @@ partition_som(
 
 ## Value
 
-A `som_partitions` object. Agreement is reported as ARI, not accuracy.
+A `som_partitions` object. Agreement is reported as ARI and AMI, not
+accuracy. AMI is chance-adjusted and normalized by the arithmetic mean
+of the two partition entropies.
 
 ## Examples
 

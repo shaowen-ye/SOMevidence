@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,6 +34,18 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.1.3" id="somevidence-113">SOMevidence 1.1.3<a class="anchor" aria-label="anchor" href="#somevidence-113"></a></h2>
+<div class="section level3">
+<h3 id="performance-and-regression-assurance-1-1-3">Performance and regression assurance<a class="anchor" aria-label="anchor" href="#performance-and-regression-assurance-1-1-3"></a></h3>
+<ul><li>Reduces task metadata retained during ensemble fitting, particularly for large grid-by-seed-by-resample budgets, without changing fit identifiers, task order, warnings, failures or reproducible random-number handling.</li>
+<li>Avoids calculating topographic-distance matrices for rows outside the requested audit domain.</li>
+<li>Reuses contingency tables when both adjusted Rand and adjusted mutual information are required, and reuses each Ward.D2 tree across candidate cluster counts within a cross-model analysis split.</li>
+<li>Accelerates complete-data co-assignment matrices and overlap-based label propagation while preserving the established consensus outputs and diagnostic records.</li>
+<li>Adds frozen version 1.1.2 reference kernels and exact release-oracle tests for numerical results, object structure, record order, warnings, failures and random-number state. No exported function, argument or default changes in this patch release.</li>
+<li>Clarifies that AMI uses arithmetic-mean entropy normalization so comparisons with software using a different AMI normalization remain interpretable.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.1.2" id="somevidence-112">SOMevidence 1.1.2<a class="anchor" aria-label="anchor" href="#somevidence-112"></a></h2>
 <div class="section level3">
 <h3 id="scientific-decision-guards-1-1-2">Scientific decision guards<a class="anchor" aria-label="anchor" href="#scientific-decision-guards-1-1-2"></a></h3>
@@ -44,7 +56,7 @@
 <li>Checks preprocessing and layer-weight prerequisites within every GUI analysis split, and blocks a requested cross-model analysis when no split is eligible.</li>
 <li>Records and warns about repeated analysis sets in resampling objects; the GUI blocks designs that would overweight duplicate data perturbations.</li>
 <li>Describes the current representation layer as diagnostics rather than claiming cross-fit reproducibility metrics that are not yet implemented.</li>
-<li>Makes CI success conditional on a complete <code>R CMD check</code> log, disables the network-dependent remote incoming query in the routine matrix, and adds PDF- manual and manually triggered remote CRAN preflight checks.</li>
+<li>Makes CI success conditional on a complete <code>R CMD check</code> log, disables the network-dependent remote incoming query in the routine matrix, and adds PDF manual and manually triggered remote CRAN preflight checks.</li>
 <li>Pins third-party GitHub Actions to immutable commits and adds explicit job timeouts.</li>
 </ul></div>
 </div>

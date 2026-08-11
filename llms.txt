@@ -72,6 +72,12 @@ thresholds and should not be combined into an automatic leaderboard.
 | Does a consensus agree with labels excluded from training? | External-label ARI/AMI, contingency and composition tables | Agreement higher among evaluable samples | Labels kept outside training and joined by stable sample identity | Classification accuracy, ecological ground truth, or causation |
 | Did a candidate meet the analyst’s evidence requirements? | `supported`, `abstain`, `uncertain`, and the individual gate checks | All specified checks pass; failures abstain; unavailable evidence is uncertain | Prespecified thresholds and complete evidence from the same workflow | The existence of discrete ecological types or universal scientific defensibility |
 
+SOMevidence calculates AMI with chance adjustment from the expected
+mutual information and uses the arithmetic mean of the two partition
+entropies as its normalizer. Software that uses a different AMI
+normalization can return a different numerical value for the same pair
+of partitions.
+
 Representation-level checks alone cannot support a hard partition. A
 supported decision requires traceable comparative partition evidence and
 at least one prespecified partition-quality requirement. Otherwise the
