@@ -49,14 +49,16 @@ test_that("GUI export is parseable and records the analysis choices", {
   )))
   expect_true(any(grepl("required_SOMevidence_version", script, fixed = TRUE)))
   expect_true(any(grepl("configuration snapshot", script, fixed = TRUE)))
-  expect_true(any(grepl("cannot import this snapshot", script, fixed = TRUE)))
+  expect_true(any(grepl(
+    "cannot currently import this snapshot", script, fixed = TRUE
+  )))
 
   snapshot <- SOMevidence:::.gui_configuration_snapshot(config)
   expect_identical(
     snapshot$snapshot_type,
     "SOMevidence GUI configuration snapshot"
   )
-  expect_match(snapshot$snapshot_note, "1.1.x cannot import")
+  expect_match(snapshot$snapshot_note, "cannot currently import")
   expect_identical(snapshot$predictors, config$predictors)
   expect_identical(
     snapshot$max_pairwise_comparisons,

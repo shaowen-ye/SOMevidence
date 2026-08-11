@@ -1,3 +1,15 @@
+# SOMevidence (development version)
+
+## Documentation and release evidence
+
+- Replaces a stale GUI version reference with a version-neutral statement of
+  the current configuration-import boundary.
+- Clarifies the conditional scope of the grouped-simulation correlation,
+  domain-dependent missingness control and the combined range-extrapolation
+  and additive-shift mechanism in the teaching gradient scenario.
+- Records a subsequent R-universe distribution refresh without treating a
+  generated source-package hash as the immutable software-source identity.
+
 # SOMevidence 1.2.0
 
 ## Identity-safe evidence and durable results

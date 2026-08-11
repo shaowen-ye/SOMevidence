@@ -65,6 +65,26 @@ checks. It complements, rather than changes, the pre-release evidence in
   fit-level representation records, one pairwise representation record and an
   idempotent object-contract upgrade. Both new functions were exported.
 
+### Distribution refresh observed on 2026-08-12
+
+A subsequent live check found that R-universe currently serves another
+successful build of the same immutable source revision. The active API record
+now identifies build
+<https://github.com/r-universe/shaowen-ye/actions/runs/31502911510>, source
+package SHA-256
+`f48e705b8fdc2d5598e0f4a6c5b3b78fafd70f0e949ffbacfbb97e5dccff89fa`
+and a source-package size of 1,229,891 bytes. All nine reported source and
+binary checks remain successful, with `RemoteRef = v1.2.0` and
+`RemoteSha = dfc9330d33689c020bc6e195b06d7d8632389c23`.
+
+Both recorded R-universe runs built the same annotated release source. The
+earlier-started run completed its deployment later and replaced the active
+distribution pointer. R-universe source-package hashes identify generated
+distribution artifacts and may therefore change after a rebuild. The
+annotated tag and its dereferenced source commit remain the durable source
+identity; the independently audited GitHub release asset remains SHA-256
+`fc1e0657eb7da9be29e71a36ea23e75fcf506b71f6c7bc4dc80d770b7973a5b2`.
+
 ## Public-release boundary
 
 - The repository remained PUBLIC after publication.

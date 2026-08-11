@@ -14,11 +14,11 @@ users can export the executable R script for a configured run.
 \description{
 The Shiny interface exposes a compact subset of the package workflow for
 teaching and exploratory configuration. Every completed run can export its
-exact R script and a YAML configuration snapshot. Version 1.1.x cannot
-import that snapshot to restore GUI controls. The exported script, not the
-GUI session or snapshot, is the executable analysis record. The interface is
-designed for a local R session, and \code{SOMevidence} sends no telemetry. In a
-local session, selected files remain on the local computer. A remotely
+exact R script and a YAML configuration snapshot. The GUI cannot currently
+import that snapshot to restore its controls. The exported script, not the
+GUI session or snapshot, is the executable analysis record. The interface
+is designed for a local R session, and \code{SOMevidence} sends no telemetry. In
+a local session, selected files remain on the local computer. A remotely
 deployed Shiny application transfers selected files to its host, whose
 operator is responsible for access controls and data handling.
 }

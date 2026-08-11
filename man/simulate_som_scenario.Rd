@@ -41,20 +41,33 @@ continuous gradient.}
 \code{"grouped_pseudoreplication"}. The default is approximately one group per
 six observations, with a minimum of 10 groups.}
 
-\item{group_icc}{Target intraclass correlation induced by the simulated
-group effect. Used only for \code{"grouped_pseudoreplication"}.}
+\item{group_icc}{Conditional within-class intraclass correlation induced by
+the simulated group effect, before any optional domain shift or
+missingness. This is not the marginal correlation after variation among
+generated class centres is included. Used only for
+\code{"grouped_pseudoreplication"}.}
 
 \item{n_domains}{Number of balanced sampling domains. A gradient always has
 domains spanning its latent coordinate. Other scenarios receive domains
 when \code{domain_shift > 0} or \code{missing_mechanism = "domain"}.}
 
 \item{domain_shift}{Magnitude of an additive domain-specific shift applied
-to the first two variables. Zero creates no additional domain shift.}
+to the first two variables. Zero creates no additional additive shift. In
+the gradient scenario, domains already occupy successive ranges of the
+latent gradient, so a held-domain contrast combines range extrapolation
+with any requested additive shift.}
 
-\item{missing_rate}{Expected fraction of entries set to missing.}
+\item{missing_rate}{Missingness-intensity control. Under \code{"mcar"}, this is
+the entry-level masking probability before minimum-observation safeguards.
+Under \code{"domain"}, entries in the final domain use
+\code{min(0.95, 2 * missing_rate)} and other domains use
+\code{missing_rate / 3}. The realised fraction is recorded in
+\code{simulation_spec$missing_rate_realized}.}
 
-\item{missing_mechanism}{One of \code{"none"}, \code{"mcar"} or \code{"domain"}. Domain
-missingness is concentrated in the final sampling domain.}
+\item{missing_mechanism}{One of \code{"none"}, \code{"mcar"} or \code{"domain"}. The
+\code{"domain"} mechanism concentrates masking in the final sampling domain;
+it is a controlled domain-dependent pattern, not a claim about an
+inferential MCAR, MAR or MNAR mechanism.}
 
 \item{id}{Optional stable sample identifiers. Supply these when independently
 constructed simulated objects will be compared in a sensitivity workflow.}
@@ -67,6 +80,18 @@ post hoc agreement assessment.
 }
 \description{
 Simulate known-structure data for SOM validation
+}
+\details{
+The scenario catalogue is deliberately compact. \code{"gradient"} generates a
+one-dimensional linear latent gradient. \code{"clusters"} and \code{"overlap"} use
+three spherical Gaussian classes with larger and smaller centre separation,
+respectively. \code{"grouped_pseudoreplication"} assigns one generated class and
+one random effect to every sampling group; \code{class_probs} therefore controls
+group-class allocation before the approximately balanced group sizes are
+expanded to rows. \code{"multilayer_conflict"} combines one class-structured
+layer with a row-permuted, noise-perturbed copy. These teaching scenarios do
+not span nonlinear gradients, anisotropic or heavy-tailed clusters, or all
+ecological dependence and missingness mechanisms.
 }
 \section{Lifecycle}{
 
