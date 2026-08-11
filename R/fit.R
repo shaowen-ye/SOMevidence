@@ -41,7 +41,7 @@
     rlen = spec$rlen,
     alpha = spec$alpha,
     maxNA.fraction = spec$max_na_fraction,
-    keep.data = TRUE,
+    keep.data = keep_model,
     mode = spec$mode,
     cores = spec$cores
   )
@@ -167,23 +167,14 @@ fit_som_ensemble <- function(data, spec, resamples = NULL,
   preprocess <- .normalise_preprocess(preprocess, names(data$layers))
   budget <- expand_som_spec(spec)
 
-  jobs <- vector("list", length(resamples$splits) * nrow(budget))
-  cursor <- 0L
-  for (split in resamples$splits) {
-    for (i in seq_len(nrow(budget))) {
-      cursor <- cursor + 1L
-      job <- budget[i, , drop = FALSE]
-      jobs[[cursor]] <- list(
-        split = split,
-        job = job,
-        fit_id = paste(split$id, job$model_id, sep = "__")
-      )
-    }
-  }
+  n_budget <- nrow(budget)
+  jobs <- seq_len(length(resamples$splits) * n_budget)
 
-  fit_job <- function(task) {
-    split <- task$split
-    job <- task$job
+  fit_job <- function(task_index) {
+    split_index <- ((task_index - 1L) %/% n_budget) + 1L
+    budget_index <- ((task_index - 1L) %% n_budget) + 1L
+    split <- resamples$splits[[split_index]]
+    job <- budget[budget_index, , drop = FALSE]
     captured <- .capture_warnings(
       .fit_one_som(
         data = data,
@@ -202,7 +193,7 @@ fit_som_ensemble <- function(data, spec, resamples = NULL,
       captured$value
     }
     fitted$warnings <- captured$warnings
-    fitted$id <- task$fit_id
+    fitted$id <- paste(split$id, job$model_id, sep = "__")
     fitted$split_id <- split$id
     fitted$assessment <- split$assessment
     fitted$grid_id <- job$grid_id

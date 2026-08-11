@@ -1,5 +1,10 @@
-.model_distance_matrix <- function(fit) {
+.model_distance_matrix <- function(fit, rows = NULL) {
   layers <- fit$processed_all
+  if (!is.null(rows)) {
+    layers <- lapply(layers, function(layer) {
+      layer[rows, , drop = FALSE]
+    })
+  }
   codes <- fit$codes
   weights <- fit$user_weights * fit$distance_weights
   weights <- weights / sum(weights)
@@ -34,7 +39,7 @@
   if (!isTRUE(fit$success)) {
     return(NA_real_)
   }
-  distance_matrix <- .model_distance_matrix(fit)[rows, , drop = FALSE]
+  distance_matrix <- .model_distance_matrix(fit, rows = rows)
   if (ncol(distance_matrix) < 2L) {
     return(NA_real_)
   }
@@ -163,20 +168,28 @@ print.som_audit <- function(x, ...) {
   all(rowSums(occupied) == 1L) && all(colSums(occupied) == 1L)
 }
 
-.adjusted_rand <- function(x, y) {
+.partition_contingency <- function(x, y) {
   keep <- !is.na(x) & !is.na(y)
   x <- x[keep]
   y <- y[keep]
-  n <- length(x)
-  if (n < 2L) {
+  list(
+    x = x,
+    y = y,
+    n = length(x),
+    table = if (length(x) >= 2L) table(x, y) else NULL
+  )
+}
+
+.ari_from_contingency <- function(contingency) {
+  if (contingency$n < 2L) {
     return(NA_real_)
   }
-  tab <- table(x, y)
+  tab <- contingency$table
   choose2 <- function(z) z * (z - 1) / 2
   index <- sum(choose2(tab))
   row_pairs <- sum(choose2(rowSums(tab)))
   col_pairs <- sum(choose2(colSums(tab)))
-  total_pairs <- choose2(n)
+  total_pairs <- choose2(contingency$n)
   expected <- row_pairs * col_pairs / total_pairs
   maximum <- 0.5 * (row_pairs + col_pairs)
   denominator <- maximum - expected
@@ -184,6 +197,10 @@ print.som_audit <- function(x, ...) {
     return(if (.same_partition_from_table(tab)) 1 else 0)
   }
   (index - expected) / denominator
+}
+
+.adjusted_rand <- function(x, y) {
+  .ari_from_contingency(.partition_contingency(x, y))
 }
 
 .label_entropy <- function(x) {
@@ -213,14 +230,11 @@ print.som_audit <- function(x, ...) {
   expected
 }
 
-.adjusted_mutual_info <- function(x, y) {
-  keep <- !is.na(x) & !is.na(y)
-  x <- x[keep]
-  y <- y[keep]
-  if (length(x) < 2L) {
+.ami_from_contingency <- function(contingency) {
+  if (contingency$n < 2L) {
     return(NA_real_)
   }
-  tab <- table(x, y)
+  tab <- contingency$table
   tab <- tab[
     rowSums(tab) > 0,
     colSums(tab) > 0,
@@ -238,13 +252,28 @@ print.som_audit <- function(x, ...) {
     )
   )
   expected <- .expected_mutual_information(tab)
-  normalizer <- mean(c(.label_entropy(x), .label_entropy(y)))
+  normalizer <- mean(c(
+    .label_entropy(contingency$x),
+    .label_entropy(contingency$y)
+  ))
   denominator <- normalizer - expected
   if (abs(denominator) < sqrt(.Machine$double.eps)) {
     return(if (.same_partition_from_table(tab)) 1 else 0)
   }
   value <- (mutual_information - expected) / denominator
   max(-1, min(1, value))
+}
+
+.adjusted_mutual_info <- function(x, y) {
+  .ami_from_contingency(.partition_contingency(x, y))
+}
+
+.partition_agreement <- function(x, y) {
+  contingency <- .partition_contingency(x, y)
+  c(
+    ari = .ari_from_contingency(contingency),
+    ami = .ami_from_contingency(contingency)
+  )
 }
 
 .weighted_codes <- function(fit) {
@@ -266,7 +295,9 @@ print.som_audit <- function(x, ...) {
 #'   comparisons created across all requested `k`. This explicit budget guards
 #'   against quadratic growth in the number of ensemble members.
 #'
-#' @return A `som_partitions` object. Agreement is reported as ARI, not accuracy.
+#' @return A `som_partitions` object. Agreement is reported as ARI and AMI,
+#'   not accuracy. AMI is chance-adjusted and normalized by the arithmetic mean
+#'   of the two partition entropies.
 #' @examples
 #' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 2)
 #' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
@@ -381,23 +412,24 @@ partition_som <- function(
   for (candidate_k in sort(unique(k))) {
     subset <- Filter(function(z) z$k == candidate_k, records)
     if (length(subset) < 2L) next
-    pairs <- utils::combn(seq_along(subset), 2L)
-    for (j in seq_len(ncol(pairs))) {
-      cursor <- cursor + 1L
-      a <- subset[[pairs[1L, j]]]
-      b <- subset[[pairs[2L, j]]]
-      jointly_observed <- !is.na(a$sample_labels) & !is.na(b$sample_labels)
-      pairwise_k[[cursor]] <- candidate_k
-      pairwise_fit_a[[cursor]] <- a$id
-      pairwise_fit_b[[cursor]] <- b$id
-      pairwise_n_joint[[cursor]] <- sum(jointly_observed)
-      pairwise_joint_coverage[[cursor]] <- mean(jointly_observed)
-      pairwise_ari[[cursor]] <- .adjusted_rand(
-        a$sample_labels, b$sample_labels
-      )
-      pairwise_ami[[cursor]] <- .adjusted_mutual_info(
-        a$sample_labels, b$sample_labels
-      )
+    for (first_index in seq_len(length(subset) - 1L)) {
+      for (second_index in seq.int(first_index + 1L, length(subset))) {
+        cursor <- cursor + 1L
+        a <- subset[[first_index]]
+        b <- subset[[second_index]]
+        agreement <- .partition_agreement(
+          a$sample_labels,
+          b$sample_labels
+        )
+        jointly_observed <- !is.na(a$sample_labels) & !is.na(b$sample_labels)
+        pairwise_k[[cursor]] <- candidate_k
+        pairwise_fit_a[[cursor]] <- a$id
+        pairwise_fit_b[[cursor]] <- b$id
+        pairwise_n_joint[[cursor]] <- sum(jointly_observed)
+        pairwise_joint_coverage[[cursor]] <- mean(jointly_observed)
+        pairwise_ari[[cursor]] <- agreement[["ari"]]
+        pairwise_ami[[cursor]] <- agreement[["ami"]]
+      }
     }
   }
   pairwise_table <- if (cursor) {

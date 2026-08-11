@@ -52,6 +52,7 @@ evaluate_external_labels <- function(consensus, labels = NULL, exclude = NULL) {
     FUN = sum
   )
   composition$within_cluster_proportion <- composition$n / cluster_n
+  agreement <- .partition_agreement(partition, external)
 
   structure(
     list(
@@ -60,8 +61,8 @@ evaluate_external_labels <- function(consensus, labels = NULL, exclude = NULL) {
       n_omitted = sum(!keep),
       source = source,
       excluded_values = exclude,
-      ari = .adjusted_rand(partition, external),
-      ami = .adjusted_mutual_info(partition, external),
+      ari = agreement[["ari"]],
+      ami = agreement[["ami"]],
       contingency = contingency,
       composition = composition
     ),

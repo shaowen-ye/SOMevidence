@@ -40,6 +40,53 @@
   )
 }
 
+.new_alignment_state <- function(n_records, k) {
+  levels <- as.character(seq_len(k))
+  list(
+    contingency = structure(
+      matrix(
+        0L,
+        nrow = k,
+        ncol = k,
+        dimnames = list(labels = levels, parents = levels)
+      ),
+      class = "table"
+    ),
+    n_joint = 0L,
+    parent_support = rep(FALSE, n_records)
+  )
+}
+
+.add_alignment_parent <- function(
+  state, labels, parent_labels, parent_index, k
+) {
+  keep <- !is.na(labels) & !is.na(parent_labels)
+  contribution <- table(
+    factor(labels[keep], levels = seq_len(k)),
+    factor(parent_labels[keep], levels = seq_len(k))
+  )
+  state$contingency[] <- state$contingency + contribution
+  state$n_joint <- state$n_joint + sum(keep)
+  state$parent_support[[parent_index]] <- any(keep)
+  state
+}
+
+.align_labels_from_state <- function(labels, state, k, reached) {
+  assignment <- clue::solve_LSAP(state$contingency, maximum = TRUE)
+  mapping <- as.integer(assignment)
+  supported_match <- state$contingency[
+    cbind(seq_len(k), mapping)
+  ] > 0L
+  mapping[!supported_match] <- NA_integer_
+  output <- rep(NA_integer_, length(labels))
+  output[!is.na(labels)] <- mapping[as.integer(labels[!is.na(labels)])]
+  list(
+    labels = output,
+    n_joint = state$n_joint,
+    parent_support = state$parent_support[reached]
+  )
+}
+
 .medoid_partition <- function(records) {
   n_records <- length(records)
   agreement <- matrix(1, nrow = n_records, ncol = n_records)
@@ -87,14 +134,27 @@
   reached <- reference_index
   diagnostics <- list()
 
+  alignment_states <- lapply(
+    seq_len(n_records), function(i) .new_alignment_state(n_records, k)
+  )
+  unreached <- setdiff(seq_len(n_records), reached)
+  for (child in unreached) {
+    alignment_states[[child]] <- .add_alignment_parent(
+      alignment_states[[child]],
+      records[[child]]$sample_labels,
+      aligned[[reference_index]],
+      reference_index,
+      k
+    )
+  }
+
   while (length(reached) < n_records) {
     candidates <- list()
     cursor <- 0L
-    parent_matrix <- do.call(cbind, aligned[reached])
     for (child in setdiff(seq_len(n_records), reached)) {
       child_labels <- records[[child]]$sample_labels
-      candidate <- .align_labels_from_parents(
-        child_labels, parent_matrix, k
+      candidate <- .align_labels_from_state(
+        child_labels, alignment_states[[child]], k, reached
       )
       raw_clusters <- sort(unique(stats::na.omit(child_labels)))
       resolved_clusters <- sort(unique(stats::na.omit(candidate$labels)))
@@ -133,6 +193,15 @@
       stringsAsFactors = FALSE
     )
     reached <- c(reached, child)
+    for (next_child in setdiff(seq_len(n_records), reached)) {
+      alignment_states[[next_child]] <- .add_alignment_parent(
+        alignment_states[[next_child]],
+        records[[next_child]]$sample_labels,
+        aligned[[child]],
+        child,
+        k
+      )
+    }
   }
 
   alignment <- do.call(cbind, aligned)
@@ -148,6 +217,23 @@
     )
   }
   list(aligned = alignment, diagnostics = diagnostic_table)
+}
+
+.complete_coassignment <- function(records, n) {
+  coassignment_sum <- matrix(0, nrow = n, ncol = n)
+  for (record in records) {
+    labels <- record$sample_labels
+    cluster_index <- match(labels, unique(labels))
+    indicator <- matrix(
+      0,
+      nrow = n,
+      ncol = length(unique(cluster_index)),
+      dimnames = list(names(labels), NULL)
+    )
+    indicator[cbind(seq_len(n), cluster_index)] <- 1
+    coassignment_sum <- coassignment_sum + tcrossprod(indicator)
+  }
+  coassignment_sum / length(records)
 }
 
 .consensus_vote <- function(aligned, reference) {
@@ -260,21 +346,27 @@ consensus_som <- function(
         "`method = \"aligned_vote\"`."
       ))
     }
-    coassignment_sum <- matrix(0, nrow = n, ncol = n)
-    coassignment_n <- matrix(0L, nrow = n, ncol = n)
-    for (record in records) {
-      labels <- record$sample_labels
-      observed <- !is.na(labels)
-      pair_observed <- outer(observed, observed, "&")
-      pair_same <- outer(labels, labels, "==")
-      pair_same[is.na(pair_same)] <- FALSE
-      coassignment_sum <- coassignment_sum + pair_same
-      coassignment_n <- coassignment_n + pair_observed
+    if (!incomplete) {
+      coassignment <- .complete_coassignment(records, n)
+    } else {
+      coassignment_sum <- matrix(0, nrow = n, ncol = n)
+      coassignment_n <- matrix(0L, nrow = n, ncol = n)
+      for (record in records) {
+        labels <- record$sample_labels
+        observed <- !is.na(labels)
+        pair_observed <- outer(observed, observed, "&")
+        pair_same <- outer(labels, labels, "==")
+        pair_same[is.na(pair_same)] <- FALSE
+        coassignment_sum <- coassignment_sum + pair_same
+        coassignment_n <- coassignment_n + pair_observed
+      }
+      if (any(coassignment_n == 0L)) {
+        .abort(
+          "Some sample pairs were never jointly assigned across the ensemble."
+        )
+      }
+      coassignment <- coassignment_sum / coassignment_n
     }
-    if (any(coassignment_n == 0L)) {
-      .abort("Some sample pairs were never jointly assigned across the ensemble.")
-    }
-    coassignment <- coassignment_sum / coassignment_n
     diag(coassignment) <- 1
     tree <- stats::hclust(stats::as.dist(1 - coassignment), method = linkage)
     consensus_labels <- stats::cutree(tree, k = as.integer(k))

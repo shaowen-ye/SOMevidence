@@ -1,3 +1,25 @@
+# SOMevidence 1.1.3
+
+## Performance and regression assurance
+
+- Reduces task metadata retained during ensemble fitting, particularly for
+  large grid-by-seed-by-resample budgets, without changing fit identifiers,
+  task order, warnings, failures or reproducible random-number handling.
+- Avoids calculating topographic-distance matrices for rows outside the
+  requested audit domain.
+- Reuses contingency tables when both adjusted Rand and adjusted mutual
+  information are required, and reuses each Ward.D2 tree across candidate
+  cluster counts within a cross-model analysis split.
+- Accelerates complete-data co-assignment matrices and overlap-based label
+  propagation while preserving the established consensus outputs and
+  diagnostic records.
+- Adds frozen version 1.1.2 reference kernels and exact release-oracle tests
+  for numerical results, object structure, record order, warnings, failures
+  and random-number state. No exported function, argument or default changes
+  in this patch release.
+- Clarifies that AMI uses arithmetic-mean entropy normalization so comparisons
+  with software using a different AMI normalization remain interpretable.
+
 # SOMevidence 1.1.2
 
 ## Scientific decision guards
@@ -23,7 +45,7 @@
 - Describes the current representation layer as diagnostics rather than
   claiming cross-fit reproducibility metrics that are not yet implemented.
 - Makes CI success conditional on a complete `R CMD check` log, disables the
-  network-dependent remote incoming query in the routine matrix, and adds PDF-
+  network-dependent remote incoming query in the routine matrix, and adds PDF
   manual and manually triggered remote CRAN preflight checks.
 - Pins third-party GitHub Actions to immutable commits and adds explicit job
   timeouts.

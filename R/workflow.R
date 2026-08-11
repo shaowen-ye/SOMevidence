@@ -808,6 +808,10 @@ print.summary.som_workflow <- function(x, ...) {
         !is.na(second_labels)
       n_shared <- length(shared_ids)
       n_joint <- sum(jointly_evaluable)
+      agreement <- .partition_agreement(
+        first_labels[jointly_evaluable],
+        second_labels[jointly_evaluable]
+      )
       cursor <- cursor + 1L
       rows[[cursor]] <- data.frame(
         scenario_a = pair[[1L]],
@@ -818,12 +822,8 @@ print.summary.som_workflow <- function(x, ...) {
         n_replicated_b = sum(second_replicated),
         n_joint = n_joint,
         joint_coverage = if (n_shared) n_joint / n_shared else NA_real_,
-        ari = .adjusted_rand(
-          first_labels[jointly_evaluable], second_labels[jointly_evaluable]
-        ),
-        ami = .adjusted_mutual_info(
-          first_labels[jointly_evaluable], second_labels[jointly_evaluable]
-        ),
+        ari = agreement[["ari"]],
+        ami = agreement[["ami"]],
         comparison_status = if (n_joint >= 2L) {
           "evaluated"
         } else if (n_shared) {
