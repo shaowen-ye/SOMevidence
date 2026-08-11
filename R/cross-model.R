@@ -208,14 +208,6 @@ fit_cross_models <- function(
       error = function(e) e
     )
     ward_tree_capture <- NULL
-    if (
-      "ward" %in% methods &&
-        !inherits(prepared, "error") &&
-        length(split$analysis) > min(candidate_k_values)
-    ) {
-      training <- prepared$matrix[split$analysis, , drop = FALSE]
-      ward_tree_capture <- .capture_warnings(.fit_ward_tree(training))
-    }
     for (method in methods) {
       seeds <- if (method == "kmeans") {
         as.integer(kmeans_seeds)
@@ -223,6 +215,15 @@ fit_cross_models <- function(
         NA_integer_
       }
       for (candidate_k in candidate_k_values) {
+        if (
+          method == "ward" &&
+            !inherits(prepared, "error") &&
+            length(split$analysis) > candidate_k &&
+            is.null(ward_tree_capture)
+        ) {
+          training <- prepared$matrix[split$analysis, , drop = FALSE]
+          ward_tree_capture <- .capture_warnings(.fit_ward_tree(training))
+        }
         if (method == "gmm") {
           seeds <- .seed_from_key(gmm_seed, split$id, paste0("k", candidate_k))
         }

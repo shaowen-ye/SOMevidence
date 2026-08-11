@@ -170,3 +170,36 @@ test_that("a cached Ward-tree failure remains one failure per valid k", {
     rep("fixed Ward-tree failure", 2L)
   )
 })
+
+test_that("Ward caching remains lazy when an earlier method fails fast", {
+  data <- simulate_som_scenario("clusters", n = 30L, p = 3L, seed = 11357L)
+  ensemble <- fit_som_ensemble(
+    data,
+    som_spec(c(2L, 2L), seeds = 11358L, rlen = 5L, k = 2L),
+    keep_models = FALSE
+  )
+  ward_calls <- 0L
+  original_ward <- SOMevidence:::.fit_ward_tree
+  testthat::local_mocked_bindings(
+    .fit_ward_tree = function(training) {
+      ward_calls <<- ward_calls + 1L
+      original_ward(training)
+    },
+    .fit_cross_partition = function(...) {
+      stop("fixed first-method failure", call. = FALSE)
+    },
+    .package = "SOMevidence"
+  )
+
+  expect_error(
+    fit_cross_models(
+      ensemble,
+      methods = c("kmeans", "ward"),
+      k = 2L,
+      fail_fast = TRUE
+    ),
+    "fixed first-method failure",
+    fixed = TRUE
+  )
+  expect_identical(ward_calls, 0L)
+})

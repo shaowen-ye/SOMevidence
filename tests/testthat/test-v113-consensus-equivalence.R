@@ -5,14 +5,14 @@ test_that("complete co-assignment matches the v1.1.2 implementation", {
     k <- sample(2:min(8L, n), 1L)
     n_records <- sample(2:25, 1L)
     records <- lapply(seq_len(n_records), function(i) {
-      labels <- sample(rep(seq_len(k), length.out = n))
+      labels <- as.integer(sample(rep(seq_len(k), length.out = n)))
       if (seed %% 3L == 0L) {
         names(labels) <- paste0("sample_", seq_len(n))
       }
       list(
         id = paste0("fit_", i),
         k = k,
-        sample_labels = as.integer(labels)
+        sample_labels = labels
       )
     })
 

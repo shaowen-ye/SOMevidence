@@ -40,4 +40,3 @@ Rscript .github/scripts/benchmark-v113.R
 The script can also run against an installed SOMevidence 1.1.3 package when
 `pkgload` is unavailable. It uses fixed random seeds and prints its runtime
 environment with the result table.
-

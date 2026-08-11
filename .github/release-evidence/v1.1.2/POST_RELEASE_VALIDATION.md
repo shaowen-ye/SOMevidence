@@ -34,4 +34,3 @@ the package as a new submission.
 The R-universe source build and eight reported platform binaries completed
 successfully. The source revision therefore matches the GitHub release and the
 repository tag exactly.
-
