@@ -29,7 +29,9 @@ comparisons created across all requested \code{k}. This explicit budget guards
 against quadratic growth in the number of ensemble members.}
 }
 \value{
-A \code{som_partitions} object. Agreement is reported as ARI, not accuracy.
+A \code{som_partitions} object. Agreement is reported as ARI and AMI,
+not accuracy. AMI is chance-adjusted and normalized by the arithmetic mean
+of the two partition entropies.
 }
 \description{
 Form and compare candidate hard partitions of SOM units

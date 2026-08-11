@@ -295,7 +295,9 @@ print.som_audit <- function(x, ...) {
 #'   comparisons created across all requested `k`. This explicit budget guards
 #'   against quadratic growth in the number of ensemble members.
 #'
-#' @return A `som_partitions` object. Agreement is reported as ARI, not accuracy.
+#' @return A `som_partitions` object. Agreement is reported as ARI and AMI,
+#'   not accuracy. AMI is chance-adjusted and normalized by the arithmetic mean
+#'   of the two partition entropies.
 #' @examples
 #' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 2)
 #' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)

@@ -17,6 +17,8 @@
   for numerical results, object structure, record order, warnings, failures
   and random-number state. No exported function, argument or default changes
   in this patch release.
+- Clarifies that AMI uses arithmetic-mean entropy normalization so comparisons
+  with software using a different AMI normalization remain interpretable.
 
 # SOMevidence 1.1.2
 
