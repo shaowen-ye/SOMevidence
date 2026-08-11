@@ -19,3 +19,25 @@ test_that("package citation identifies the sole package author", {
   expect_match(text, metadata$Version, fixed = TRUE)
   expect_identical(length(citation[[1L]]$author), 1L)
 })
+
+test_that("CITATION.cff agrees with package metadata", {
+  skip_if_not_installed("yaml")
+  cff_path <- testthat::test_path("..", "..", "CITATION.cff")
+  if (!file.exists(cff_path)) {
+    skip("Repository-level CITATION.cff is validated by the lint workflow")
+  }
+
+  cff <- yaml::read_yaml(cff_path)
+  metadata <- as.list(read.dcf(
+    testthat::test_path("..", "..", "DESCRIPTION")
+  )[1L, ])
+  released <- as.Date(as.character(cff[["date-released"]]))
+  shanghai_today <- as.Date(Sys.time(), tz = "Asia/Shanghai")
+
+  expect_identical(as.character(cff$version), metadata$Version)
+  expect_identical(cff$authors[[1L]][["given-names"]], "Shaowen")
+  expect_identical(cff$authors[[1L]][["family-names"]], "Ye")
+  expect_identical(length(cff$authors), 1L)
+  expect_false(is.na(released))
+  expect_lte(released, shanghai_today)
+})

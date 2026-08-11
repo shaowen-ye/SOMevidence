@@ -94,6 +94,12 @@ print.som_gate <- function(x, ...) {
 #' requested cross-model fits succeeded. Missing audit evidence produces an
 #' uncertain result rather than being treated as a pass.
 #'
+#' A `"supported"` status means only that the analyst-specified evidence
+#' requirements and structural completeness checks were met for the stated
+#' data, analysis design, preprocessing, model budget and candidate `k`. It does
+#' not demonstrate that discrete ecological types exist, identify a causal
+#' mechanism, or establish ecological truth.
+#'
 #' @param audit A `som_audit` object.
 #' @param partitions Optional `som_partitions` object.
 #' @param k Candidate number of clusters when partition stability is assessed.

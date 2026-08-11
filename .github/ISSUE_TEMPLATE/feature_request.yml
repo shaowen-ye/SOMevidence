@@ -1,0 +1,52 @@
+name: Feature request
+description: Propose a focused improvement to SOMevidence
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the scientific or software need without uploading confidential data, unpublished coordinates, personal information, or credentials. Use simulated, public, or safely aggregated examples whenever possible.
+  - type: textarea
+    id: need
+    attributes:
+      label: Scientific or user need
+      description: What question or workflow is not adequately supported now?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest interface or documentation change that would address the need.
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Sampling design and evidence boundary
+      description: If relevant, identify the independent sampling unit, transfer domain, external labels, and conclusions the feature should not imply.
+  - type: textarea
+    id: example
+    attributes:
+      label: Non-sensitive example
+      description: Provide simulated, public, or safely aggregated data and code if they clarify the request.
+      render: R
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Note any existing functions or workarounds you tried.
+  - type: textarea
+    id: session
+    attributes:
+      label: Package version and session information
+      description: When relevant, include packageVersion("SOMevidence") and sessionInfo().
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: I removed confidential data, personal information, unpublished coordinates, and credentials.
+          required: true

@@ -153,6 +153,16 @@ print.som_audit <- function(x, ...) {
   invisible(x)
 }
 
+.same_partition_from_table <- function(tab) {
+  tab <- tab[
+    rowSums(tab) > 0,
+    colSums(tab) > 0,
+    drop = FALSE
+  ]
+  occupied <- tab > 0L
+  all(rowSums(occupied) == 1L) && all(colSums(occupied) == 1L)
+}
+
 .adjusted_rand <- function(x, y) {
   keep <- !is.na(x) & !is.na(y)
   x <- x[keep]
@@ -171,20 +181,21 @@ print.som_audit <- function(x, ...) {
   maximum <- 0.5 * (row_pairs + col_pairs)
   denominator <- maximum - expected
   if (abs(denominator) < .Machine$double.eps) {
-    return(if (all(outer(x, x, "==") == outer(y, y, "=="))) 1 else 0)
+    return(if (.same_partition_from_table(tab)) 1 else 0)
   }
   (index - expected) / denominator
 }
 
 .label_entropy <- function(x) {
   probability <- as.numeric(table(x)) / length(x)
+  probability <- probability[probability > 0]
   -sum(probability * log(probability))
 }
 
 .expected_mutual_information <- function(tab) {
-  n <- sum(tab)
-  row_n <- rowSums(tab)
-  col_n <- colSums(tab)
+  n <- as.double(sum(tab))
+  row_n <- as.double(rowSums(tab))
+  col_n <- as.double(colSums(tab))
   expected <- 0
   for (a in row_n) {
     for (b in col_n) {
@@ -210,13 +221,19 @@ print.som_audit <- function(x, ...) {
     return(NA_real_)
   }
   tab <- table(x, y)
-  n <- sum(tab)
+  tab <- tab[
+    rowSums(tab) > 0,
+    colSums(tab) > 0,
+    drop = FALSE
+  ]
+  n <- as.double(sum(tab))
   nonzero <- tab > 0
-  row_n <- rowSums(tab)
-  col_n <- colSums(tab)
+  row_n <- as.double(rowSums(tab))
+  col_n <- as.double(colSums(tab))
+  observed <- as.double(tab[nonzero])
   mutual_information <- sum(
-    (tab[nonzero] / n) * log(
-      n * tab[nonzero] /
+    (observed / n) * log(
+      n * observed /
         outer(row_n, col_n)[nonzero]
     )
   )
@@ -224,7 +241,7 @@ print.som_audit <- function(x, ...) {
   normalizer <- mean(c(.label_entropy(x), .label_entropy(y)))
   denominator <- normalizer - expected
   if (abs(denominator) < sqrt(.Machine$double.eps)) {
-    return(if (all(outer(x, x, "==") == outer(y, y, "=="))) 1 else 0)
+    return(if (.same_partition_from_table(tab)) 1 else 0)
   }
   value <- (mutual_information - expected) / denominator
   max(-1, min(1, value))

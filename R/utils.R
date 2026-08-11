@@ -6,6 +6,11 @@
   if (is.null(x)) y else x
 }
 
+.count_noun <- function(n, singular, plural = paste0(singular, "s")) {
+  n <- as.integer(n)
+  sprintf("%d %s", n, if (n == 1L) singular else plural)
+}
+
 .with_reproducible_seed <- function(seed, code) {
   withr::with_seed(
     seed,

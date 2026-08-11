@@ -14,6 +14,30 @@ test_that("workflow keeps evidence streams separate", {
     unique(workflow$cross_comparison$comparisons$method),
     c("kmeans", "ward")
   )
+  workflow_summary <- summary(workflow)
+  expect_true(all(workflow_summary$consensus$status == "succeeded"))
+  expect_true(all(
+    workflow_summary$consensus$computation_status == "computed"
+  ))
+  expect_true(all(workflow_summary$consensus$complete_consensus_k))
+  expect_true(all(c(
+    "n_consensus_clusters", "assignment_coverage",
+    "consensus_label_coverage", "replicated_assignment_coverage"
+  ) %in% names(workflow_summary$consensus)))
+  expect_true(all(
+    workflow_summary$consensus$consensus_label_coverage == 1
+  ))
+  expect_setequal(workflow_summary$cross_models$method, c("kmeans", "ward"))
+  expect_identical(
+    names(workflow_summary$cross_models)[1:4],
+    c("method", "succeeded", "failed", "warnings")
+  )
+  expect_true(all(
+    workflow_summary$cross_models$expected ==
+      workflow_summary$cross_models$succeeded +
+        workflow_summary$cross_models$failed
+  ))
+  expect_true(all(workflow_summary$cross_models$success_rate == 1))
   expect_error(
     run_som_workflow(
       d,
@@ -22,6 +46,145 @@ test_that("workflow keeps evidence streams separate", {
     ),
     "containing only"
   )
+})
+
+test_that("workflow preflights the planned pairwise budget before fitting", {
+  data <- simulate_som_scenario("clusters", n = 48, p = 3, seed = 930)
+  specification <- som_spec(
+    c(2, 2), seeds = 1:4, rlen = 5L, k = 2L
+  )
+
+  boundary <- run_som_workflow(
+    data, specification,
+    cross_models = character(),
+    max_pairwise_comparisons = 6L
+  )
+  expect_equal(boundary$ensemble$expected_models, 4L)
+  expect_equal(nrow(boundary$partitions$pairwise), 6L)
+
+  impossible_after_preflight <- som_spec(
+    c(7, 7), seeds = 1:4, rlen = 5L, k = 2L
+  )
+  expect_error(
+    run_som_workflow(
+      data, impossible_after_preflight,
+      cross_models = character(), fail_fast = TRUE,
+      max_pairwise_comparisons = 5L
+    ),
+    "before any SOM fitting"
+  )
+
+  repeated <- som_resamples(
+    data, method = "subsample", repeats = 2L, prop = 0.8, seed = 931L
+  )
+  expect_error(
+    run_som_workflow(
+      data,
+      som_spec(c(2, 2), seeds = 1:2, rlen = 5L, k = 2L),
+      resamples = repeated,
+      cross_models = character(),
+      max_pairwise_comparisons = 5L
+    ),
+    "would create 6 pairwise comparisons"
+  )
+})
+
+test_that("workflow summaries remain informative for legacy result objects", {
+  data <- simulate_som_scenario("clusters", n = 60, p = 4, seed = 932)
+  workflow <- run_som_workflow(
+    data,
+    som_spec(c(3, 2), seeds = 933:934, rlen = 10L, k = 2:3),
+    cross_models = c("kmeans", "ward")
+  )
+  legacy <- workflow
+  legacy$requested_k <- NULL
+  for (key in names(legacy$consensus)) {
+    legacy$consensus[[key]]$n_consensus_clusters <- NULL
+    legacy$consensus[[key]]$complete_consensus_k <- NULL
+    legacy$consensus[[key]]$assignment_coverage <- NULL
+    legacy$consensus[[key]]$consensus_label_coverage <- NULL
+    legacy$consensus[[key]]$replicated_assignment_coverage <- NULL
+  }
+  legacy$cross_models$methods <- NULL
+  legacy$cross_models$warnings <- NULL
+
+  legacy_summary <- summary(legacy)
+  expect_true(all(legacy_summary$consensus$status == "succeeded"))
+  expect_true(all(
+    legacy_summary$consensus$computation_status == "computed"
+  ))
+  expect_true(all(legacy_summary$consensus$complete_consensus_k))
+  expect_true(all(legacy_summary$consensus$assignment_coverage == 1))
+  expect_true(all(legacy_summary$consensus$consensus_label_coverage == 1))
+  expect_true(all(
+    legacy_summary$consensus$replicated_assignment_coverage == 1
+  ))
+  expect_setequal(legacy_summary$cross_models$method, c("kmeans", "ward"))
+  expect_true(all(legacy_summary$cross_models$warnings == 0L))
+  expect_true(all(
+    legacy_summary$cross_models$expected ==
+      legacy_summary$cross_models$succeeded +
+        legacy_summary$cross_models$failed
+  ))
+
+  legacy$consensus$k3 <- NULL
+  unavailable_summary <- summary(legacy)
+  expect_identical(
+    unavailable_summary$consensus$status,
+    c("succeeded", "failed")
+  )
+  expect_identical(
+    unavailable_summary$consensus$computation_status,
+    c("computed", "not_computed")
+  )
+  expect_true(is.na(
+    unavailable_summary$consensus$complete_consensus_k[[2L]]
+  ))
+  printed <- capture.output(print(legacy))
+  expect_true(any(grepl("not_computed", printed, fixed = TRUE)))
+  expect_true(any(grepl("complete=yes", printed, fixed = TRUE)))
+  expect_true(any(grepl("expected", printed, fixed = TRUE)))
+
+  printed_summary <- capture.output(print(unavailable_summary))
+  expect_true(any(grepl("not_computed", printed_summary, fixed = TRUE)))
+  expect_true(any(grepl("labels=", printed_summary, fixed = TRUE)))
+
+  version_1_1_0_summary <- legacy_summary
+  version_1_1_0_summary$consensus <-
+    version_1_1_0_summary$consensus[, c("k", "status"), drop = FALSE]
+  version_1_1_0_summary$cross_models <-
+    version_1_1_0_summary$cross_models[, c(
+      "method", "succeeded", "failed", "warnings"
+    ), drop = FALSE]
+  version_1_1_0_print <- capture.output(print(version_1_1_0_summary))
+  expect_true(any(grepl("computed", version_1_1_0_print, fixed = TRUE)))
+  for (i in seq_len(nrow(version_1_1_0_summary$cross_models))) {
+    method <- version_1_1_0_summary$cross_models$method[[i]]
+    succeeded <- version_1_1_0_summary$cross_models$succeeded[[i]]
+    failed <- version_1_1_0_summary$cross_models$failed[[i]]
+    expected <- succeeded + failed
+    rate <- if (expected > 0L) succeeded / expected else NA_real_
+    expected_line <- sprintf(
+      "- %s: %d expected, %d succeeded, %d failed",
+      method, expected, succeeded, failed
+    )
+    expect_true(any(grepl(
+      expected_line, version_1_1_0_print, fixed = TRUE
+    )))
+    expect_true(any(grepl(
+      .format_workflow_rate(rate), version_1_1_0_print, fixed = TRUE
+    )))
+  }
+
+  zero_attempts_summary <- version_1_1_0_summary
+  zero_attempts_summary$cross_models$succeeded[[1L]] <- 0L
+  zero_attempts_summary$cross_models$failed[[1L]] <- 0L
+  zero_attempts_print <- capture.output(print(zero_attempts_summary))
+  expect_true(any(grepl(
+    "0 expected, 0 succeeded, 0 failed",
+    zero_attempts_print, fixed = TRUE
+  )))
+  expect_true(any(grepl("NA success", zero_attempts_print, fixed = TRUE)))
 })
 
 test_that("sensitivity scenarios are summarized without a ranking", {

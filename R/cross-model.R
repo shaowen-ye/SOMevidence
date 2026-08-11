@@ -101,7 +101,7 @@
     # Mclust evaluates a reconstructed mclustBIC call in the caller. Provide
     # the namespaced function locally so optional use does not require
     # attaching the whole mclust package to the search path.
-    assign("mclustBIC", mclust::mclustBIC) # nolint: object_name_linter, object_usage_linter.
+    assign("mclustBIC", mclust::mclustBIC) # nolint: object_name_linter.
     model <- .with_reproducible_seed(seed, mclust::Mclust(
       training, G = k, modelNames = gmm_model_names, verbose = FALSE
     ))

@@ -1,5 +1,7 @@
 linters: linters_with_defaults(
-  object_usage_linter = NULL,
+  defaults = default_linters[
+    setdiff(names(default_linters), "object_usage_linter")
+    ],
   line_length_linter = line_length_linter(100L)
   )
 exclusions: list(

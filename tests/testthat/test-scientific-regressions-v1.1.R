@@ -222,6 +222,42 @@ test_that("partition auditing enforces an explicit pairwise budget", {
   )
 })
 
+test_that("degenerate agreement metrics avoid sample-by-sample matrices", {
+  constant <- rep.int(1L, 100000L)
+  relabelled <- rep.int(9L, length(constant))
+
+  expect_identical(
+    SOMevidence:::.adjusted_rand(constant, relabelled),
+    1
+  )
+  expect_identical(
+    SOMevidence:::.adjusted_mutual_info(constant, relabelled),
+    1
+  )
+
+  equivalent <- table(
+    c(1L, 1L, 2L, 2L),
+    c(8L, 8L, 7L, 7L)
+  )
+  crossed <- table(
+    c(1L, 1L, 2L, 2L),
+    c(7L, 8L, 7L, 8L)
+  )
+  expect_true(SOMevidence:::.same_partition_from_table(equivalent))
+  expect_false(SOMevidence:::.same_partition_from_table(crossed))
+
+  unused_x <- factor(rep("a", 4L), levels = c("a", "unused_x"))
+  unused_y <- factor(rep("z", 4L), levels = c("z", "unused_y"))
+  expect_identical(SOMevidence:::.adjusted_rand(unused_x, unused_y), 1)
+  expect_identical(
+    SOMevidence:::.adjusted_mutual_info(unused_x, unused_y),
+    1
+  )
+  expect_true(SOMevidence:::.same_partition_from_table(table(
+    unused_x, unused_y
+  )))
+})
+
 test_that("finite integer validation rejects truncation and overflow", {
   expect_error(som_spec(c(2, 2), rlen = 2.5), "integer")
   expect_error(som_spec(c(2, 2), cores = Inf, k = 2L), "one number")

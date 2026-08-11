@@ -21,8 +21,23 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::lintr
+          extra-packages: any::lintr, any::yaml
           needs: lint
+      - name: Validate citation metadata
+        run: |
+          metadata <- as.list(read.dcf("DESCRIPTION")[1L, ])
+          cff <- yaml::read_yaml("CITATION.cff")
+          released <- as.Date(as.character(cff[["date-released"]]))
+          shanghai_today <- as.Date(Sys.time(), tz = "Asia/Shanghai")
+          stopifnot(
+            identical(as.character(cff$version), metadata$Version),
+            length(cff$authors) == 1L,
+            identical(cff$authors[[1L]][["given-names"]], "Shaowen"),
+            identical(cff$authors[[1L]][["family-names"]], "Ye"),
+            !is.na(released),
+            released <= shanghai_today
+          )
+        shell: Rscript {0}
       - name: Lint package
         run: |
           lints <- lintr::lint_package()

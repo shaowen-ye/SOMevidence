@@ -7,9 +7,12 @@
 open_data_registry(role = NULL, domain = NULL)
 }
 \arguments{
-\item{role}{Optional role used to filter the registry.}
+\item{role}{Optional role used to filter the registry. Matching is exact and
+case-sensitive; unmatched values return no matching rows.}
 
-\item{domain}{Optional scientific domain used to filter the registry.}
+\item{domain}{Optional scientific domain used to filter the registry.
+Matching is exact and case-sensitive; unmatched values return no matching
+rows.}
 }
 \value{
 A data frame with one row per governed external dataset.

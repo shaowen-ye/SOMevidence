@@ -36,3 +36,10 @@ source partition and the consensus retain the requested \code{k}, and that all
 requested cross-model fits succeeded. Missing audit evidence produces an
 uncertain result rather than being treated as a pass.
 }
+\details{
+A \code{"supported"} status means only that the analyst-specified evidence
+requirements and structural completeness checks were met for the stated
+data, analysis design, preprocessing, model budget and candidate \code{k}. It does
+not demonstrate that discrete ecological types exist, identify a causal
+mechanism, or establish ecological truth.
+}

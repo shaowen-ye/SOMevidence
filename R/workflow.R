@@ -71,6 +71,50 @@ run_som_workflow <- function(
       paste(allowed_control, collapse = ", "), "."
     ))
   }
+  if (!inherits(data, "som_data")) {
+    .abort("`data` must come from `som_data()`.")
+  }
+  if (!inherits(spec, "som_spec")) {
+    .abort("`spec` must come from `som_spec()`.")
+  }
+  .assert_integer_vector(k, "k", lower = 2)
+  .assert_scalar_integer(
+    max_pairwise_comparisons, "max_pairwise_comparisons", lower = 1
+  )
+  resamples <- resamples %||% som_resamples(data, method = "full")
+  if (!inherits(resamples, "som_resamples") ||
+        resamples$n != nrow(data$metadata)) {
+    .abort("`resamples` must describe the rows in `data`.")
+  }
+  if (is.null(resamples$sample_ids)) {
+    .abort(paste0(
+      "This legacy `som_resamples` object has no sample identity record. ",
+      "Recreate it with `som_resamples()` before fitting."
+    ))
+  }
+  if (!identical(
+    as.character(resamples$sample_ids),
+    as.character(data$metadata$id)
+  )) {
+    .abort(paste0(
+      "`resamples` were created for different sample IDs or row order. ",
+      "Recreate them from the current `som_data` object."
+    ))
+  }
+  planned_models <- as.double(length(resamples$splits)) *
+    nrow(expand_som_spec(spec))
+  planned_pairwise <- choose(planned_models, 2) *
+    length(unique(as.integer(k)))
+  if (!is.finite(planned_pairwise) ||
+        planned_pairwise > max_pairwise_comparisons) {
+    .abort(paste0(
+      "The planned workflow would create ", format(planned_pairwise),
+      " pairwise comparisons before any SOM fitting, exceeding ",
+      "`max_pairwise_comparisons = ",
+      format(max_pairwise_comparisons), "`. Reduce the model budget or ",
+      "increase the limit deliberately."
+    ))
+  }
   ensemble <- fit_som_ensemble(
     data = data,
     spec = spec,
@@ -176,30 +220,265 @@ run_som_workflow <- function(
   output
 }
 
+.workflow_consensus_summary <- function(object, requested_k) {
+  consensus_objects <- object$consensus %||% list()
+  do.call(rbind, lapply(requested_k, function(candidate_k) {
+    consensus <- consensus_objects[[paste0("k", candidate_k)]]
+    if (is.null(consensus)) {
+      return(data.frame(
+        k = as.integer(candidate_k), status = "failed",
+        computation_status = "not_computed",
+        n_consensus_clusters = NA_integer_,
+        complete_consensus_k = NA,
+        assignment_coverage = NA_real_,
+        consensus_label_coverage = NA_real_,
+        replicated_assignment_coverage = NA_real_,
+        stringsAsFactors = FALSE
+      ))
+    }
+
+    labels <- consensus$consensus_labels
+    assignment_count <- consensus$assignment_count
+    n_clusters <- consensus$n_consensus_clusters
+    if (is.null(n_clusters) && !is.null(labels)) {
+      n_clusters <- length(unique(stats::na.omit(labels)))
+    }
+    n_clusters <- if (length(n_clusters) == 1L && !is.na(n_clusters)) {
+      as.integer(n_clusters)
+    } else {
+      NA_integer_
+    }
+    complete <- consensus$complete_consensus_k
+    if (is.null(complete) && !is.na(n_clusters)) {
+      complete <- n_clusters == candidate_k
+    }
+    complete <- if (is.logical(complete) && length(complete) == 1L &&
+                      !is.na(complete)) {
+      complete
+    } else {
+      NA
+    }
+    assignment_coverage <- consensus$assignment_coverage
+    if (is.null(assignment_coverage) && !is.null(assignment_count)) {
+      assignment_coverage <- mean(assignment_count > 0L)
+    }
+    if (is.null(assignment_coverage) && !is.null(labels)) {
+      assignment_coverage <- mean(!is.na(labels))
+    }
+    consensus_label_coverage <- consensus$consensus_label_coverage
+    if (is.null(consensus_label_coverage) && !is.null(labels)) {
+      consensus_label_coverage <- mean(!is.na(labels))
+    }
+    if (is.null(consensus_label_coverage)) {
+      consensus_label_coverage <- assignment_coverage
+    }
+    replicated_coverage <- consensus$replicated_assignment_coverage
+    if (is.null(replicated_coverage) && !is.null(assignment_count)) {
+      replicated_coverage <- mean(assignment_count >= 2L)
+    }
+    scalar_coverage <- function(value) {
+      if (is.numeric(value) && length(value) == 1L && !is.na(value)) {
+        as.numeric(value)
+      } else {
+        NA_real_
+      }
+    }
+
+    data.frame(
+      k = as.integer(candidate_k), status = "succeeded",
+      computation_status = "computed",
+      n_consensus_clusters = n_clusters,
+      complete_consensus_k = complete,
+      assignment_coverage = scalar_coverage(assignment_coverage),
+      consensus_label_coverage = scalar_coverage(consensus_label_coverage),
+      replicated_assignment_coverage = scalar_coverage(replicated_coverage),
+      stringsAsFactors = FALSE
+    )
+  }))
+}
+
+.workflow_cross_model_summary <- function(object) {
+  cross_models <- object$cross_models
+  if (is.null(cross_models)) {
+    return(data.frame(
+      method = character(), succeeded = integer(), failed = integer(),
+      warnings = integer(), expected = integer(), success_rate = numeric(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  records <- cross_models$records %||% list()
+  failures <- cross_models$failures %||% data.frame()
+  warnings <- cross_models$warnings %||% data.frame()
+  record_methods <- if (length(records)) {
+    vapply(records, function(record) {
+      method <- record$method
+      if (is.null(method) || !length(method) || is.na(method[[1L]])) {
+        NA_character_
+      } else {
+        as.character(method[[1L]])
+      }
+    }, character(1))
+  } else {
+    character()
+  }
+  table_methods <- function(table) {
+    if (is.data.frame(table) && "method" %in% names(table)) {
+      as.character(table$method)
+    } else {
+      character()
+    }
+  }
+  methods <- unique(c(
+    as.character(cross_models$methods %||% character()),
+    record_methods,
+    table_methods(failures),
+    table_methods(warnings)
+  ))
+  methods <- methods[!is.na(methods) & nzchar(methods)]
+  if (!length(methods)) {
+    return(data.frame(
+      method = character(), succeeded = integer(), failed = integer(),
+      warnings = integer(), expected = integer(), success_rate = numeric(),
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  do.call(rbind, lapply(methods, function(method) {
+    succeeded <- sum(record_methods == method, na.rm = TRUE)
+    failed <- sum(table_methods(failures) == method, na.rm = TRUE)
+    warning_count <- sum(table_methods(warnings) == method, na.rm = TRUE)
+    expected <- succeeded + failed
+    data.frame(
+      method = method,
+      succeeded = as.integer(succeeded),
+      failed = as.integer(failed),
+      warnings = as.integer(warning_count),
+      expected = as.integer(expected),
+      success_rate = if (expected > 0L) succeeded / expected else NA_real_,
+      stringsAsFactors = FALSE
+    )
+  }))
+}
+
+.format_workflow_rate <- function(value) {
+  if (length(value) == 1L && is.finite(value)) {
+    sprintf("%.1f%%", 100 * value)
+  } else {
+    "NA"
+  }
+}
+
+.cross_model_print_fields <- function(cross_models) {
+  expected <- if ("expected" %in% names(cross_models)) {
+    cross_models$expected
+  } else {
+    cross_models$succeeded + cross_models$failed
+  }
+  success_rate <- if ("success_rate" %in% names(cross_models)) {
+    cross_models$success_rate
+  } else {
+    ifelse(
+      !is.na(expected) & expected > 0,
+      cross_models$succeeded / expected,
+      NA_real_
+    )
+  }
+  list(expected = expected, success_rate = success_rate)
+}
+
+.consensus_computation_status <- function(consensus) {
+  if ("computation_status" %in% names(consensus)) {
+    return(as.character(consensus$computation_status))
+  }
+  if ("status" %in% names(consensus)) {
+    return(ifelse(consensus$status == "succeeded", "computed", "not_computed"))
+  }
+  rep("not_computed", nrow(consensus))
+}
+
+.print_workflow_consensus <- function(consensus) {
+  computation_status <- .consensus_computation_status(consensus)
+  detail_columns <- c(
+    "complete_consensus_k", "assignment_coverage",
+    "consensus_label_coverage", "replicated_assignment_coverage"
+  )
+  has_details <- all(detail_columns %in% names(consensus))
+  for (i in seq_len(nrow(consensus))) {
+    if (computation_status[[i]] == "not_computed") {
+      cat(sprintf("    - k=%d: not_computed\n", consensus$k[[i]]))
+    } else if (!has_details) {
+      cat(sprintf("    - k=%d: computed\n", consensus$k[[i]]))
+    } else {
+      complete <- if (is.na(consensus$complete_consensus_k[[i]])) {
+        "NA"
+      } else if (consensus$complete_consensus_k[[i]]) {
+        "yes"
+      } else {
+        "no"
+      }
+      cat(sprintf(
+        paste0(
+          "    - k=%d: computed; complete=%s; assignment=%s; ",
+          "labels=%s; replicated=%s\n"
+        ),
+        consensus$k[[i]], complete,
+        .format_workflow_rate(consensus$assignment_coverage[[i]]),
+        .format_workflow_rate(consensus$consensus_label_coverage[[i]]),
+        .format_workflow_rate(consensus$replicated_assignment_coverage[[i]])
+      ))
+    }
+  }
+}
+
 #' @export
 print.som_workflow <- function(x, ...) {
+  workflow_summary <- summary(x)
   som_success <- sum(vapply(
     x$ensemble$fits, function(fit) isTRUE(fit$success), logical(1)
   ))
   cat("<som_workflow>\n")
   cat("  SOM fits      :", x$ensemble$expected_models, "attempted;",
       som_success, "succeeded;", nrow(x$ensemble$failures), "failed;",
-      nrow(x$ensemble$warnings), "warnings\n")
+      .count_noun(nrow(x$ensemble$warnings), "warning"), "\n")
   cat("  candidate k   :", paste(
     x$requested_k %||% x$partitions$stability$k, collapse = ", "
   ), "\n")
-  cat("  consensus     :", length(x$consensus), "succeeded;",
-      nrow(x$consensus_failures), "failed\n")
-  if (!is.null(x$cross_models)) {
-    cat("  cross-model   :", length(x$cross_models$records), "succeeded;",
-        nrow(x$cross_models$failures), "failed;",
-        nrow(x$cross_models$warnings), "warnings\n")
-    method_status <- summary(x)$cross_models
+  consensus_status <- workflow_summary$consensus
+  consensus_computation <- .consensus_computation_status(
+    consensus_status
+  )
+  cat("  consensus     :", sum(
+    consensus_computation == "computed"
+  ), "computed;", sum(
+    consensus_computation == "not_computed"
+  ),
+  "not_computed\n")
+  .print_workflow_consensus(consensus_status)
+  method_status <- workflow_summary$cross_models
+  if (nrow(method_status)) {
+    total_expected <- sum(method_status$expected)
+    total_succeeded <- sum(method_status$succeeded)
+    total_failed <- sum(method_status$failed)
+    total_warnings <- sum(method_status$warnings)
+    total_rate <- if (total_expected > 0L) {
+      total_succeeded / total_expected
+    } else {
+      NA_real_
+    }
+    cat("  cross-model   :", total_expected, "expected;", total_succeeded,
+        "succeeded;", total_failed, "failed;",
+        .count_noun(total_warnings, "warning"), ";",
+        .format_workflow_rate(total_rate), "success\n")
     for (i in seq_len(nrow(method_status))) {
       cat(sprintf(
-        "    - %s: %d succeeded, %d failed, %d warnings\n",
-        method_status$method[[i]], method_status$succeeded[[i]],
-        method_status$failed[[i]], method_status$warnings[[i]]
+        paste0(
+          "    - %s: %d expected, %d succeeded, %d failed, %s, ",
+          "%s success\n"
+        ),
+        method_status$method[[i]], method_status$expected[[i]],
+        method_status$succeeded[[i]], method_status$failed[[i]],
+        .count_noun(method_status$warnings[[i]], "warning"),
+        .format_workflow_rate(method_status$success_rate[[i]])
       ))
     }
   }
@@ -227,37 +506,8 @@ summary.som_workflow <- function(object, ...) {
     stringsAsFactors = FALSE
   )
   requested_k <- object$requested_k %||% .workflow_requested_k(object)
-  consensus <- data.frame(
-    k = requested_k,
-    status = ifelse(
-      paste0("k", requested_k) %in% names(object$consensus),
-      "succeeded", "failed"
-    ),
-    stringsAsFactors = FALSE
-  )
-  methods <- if (is.null(object$cross_models)) {
-    character()
-  } else {
-    object$cross_models$methods
-  }
-  cross_models <- do.call(rbind, lapply(methods, function(method) {
-    succeeded <- sum(vapply(object$cross_models$records, function(record) {
-      identical(record$method, method)
-    }, logical(1)))
-    data.frame(
-      method = method,
-      succeeded = succeeded,
-      failed = sum(object$cross_models$failures$method == method),
-      warnings = sum(object$cross_models$warnings$method == method),
-      stringsAsFactors = FALSE
-    )
-  }))
-  if (is.null(cross_models)) {
-    cross_models <- data.frame(
-      method = character(), succeeded = integer(), failed = integer(),
-      warnings = integer(), stringsAsFactors = FALSE
-    )
-  }
+  consensus <- .workflow_consensus_summary(object, requested_k)
+  cross_models <- .workflow_cross_model_summary(object)
   structure(
     list(
       som = som,
@@ -290,15 +540,26 @@ summary.som_workflow <- function(object, ...) {
 print.summary.som_workflow <- function(x, ...) {
   cat("<summary.som_workflow>\n")
   cat("  SOM success:", x$som$succeeded, "/", x$som$attempted, "\n")
-  cat("  consensus  :", sum(x$consensus$status == "succeeded"), "/",
-      nrow(x$consensus), "\n")
+  consensus_computation <- .consensus_computation_status(x$consensus)
+  cat("  consensus  :", sum(
+    consensus_computation == "computed"
+  ), "computed;", sum(
+    consensus_computation == "not_computed"
+  ), "not_computed\n")
+  .print_workflow_consensus(x$consensus)
   if (nrow(x$cross_models)) {
+    print_fields <- .cross_model_print_fields(x$cross_models)
     cat("  reference methods:\n")
     for (i in seq_len(nrow(x$cross_models))) {
       cat(sprintf(
-        "    - %s: %d succeeded, %d failed, %d warnings\n",
-        x$cross_models$method[[i]], x$cross_models$succeeded[[i]],
-        x$cross_models$failed[[i]], x$cross_models$warnings[[i]]
+        paste0(
+          "    - %s: %d expected, %d succeeded, %d failed, %s, ",
+          "%s success\n"
+        ),
+        x$cross_models$method[[i]], print_fields$expected[[i]],
+        x$cross_models$succeeded[[i]], x$cross_models$failed[[i]],
+        .count_noun(x$cross_models$warnings[[i]], "warning"),
+        .format_workflow_rate(print_fields$success_rate[[i]])
       ))
     }
   }

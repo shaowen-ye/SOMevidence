@@ -7,8 +7,11 @@
 #' function returns metadata only; it never downloads data or changes the
 #' user's files.
 #'
-#' @param role Optional role used to filter the registry.
+#' @param role Optional role used to filter the registry. Matching is exact and
+#'   case-sensitive; unmatched values return no matching rows.
 #' @param domain Optional scientific domain used to filter the registry.
+#'   Matching is exact and case-sensitive; unmatched values return no matching
+#'   rows.
 #'
 #' @return A data frame with one row per governed external dataset.
 #' @export
@@ -25,6 +28,7 @@ open_data_registry <- function(role = NULL, domain = NULL) {
     path,
     stringsAsFactors = FALSE, na.strings = c("", "NA")
   )
+
   if (!is.null(role)) registry <- registry[registry$role %in% role, , drop = FALSE]
   if (!is.null(domain)) {
     registry <- registry[registry$domain %in% domain, , drop = FALSE]

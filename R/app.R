@@ -244,9 +244,9 @@
     scale = config$scale,
     zero_replacement = config$zero_replacement
   )
-  # Validate transformation requirements before committing to a model run.
+  # Validate transformation requirements before reporting a ready preflight,
+  # including workflows that do not request cross-model references.
   invisible(.transform_matrix(data$layers$data, preprocessing))
-
   resample_arguments <- list(
     data = data,
     method = config$resample_method,
@@ -270,14 +270,95 @@
     k = config$k
   )
 
-  selected <- as.matrix(raw[config$predictors])
+  split_analysis_n <- vapply(
+    resamples$splits, function(split) length(split$analysis), integer(1)
+  )
+  grid_units <- specification$grids$xdim * specification$grids$ydim
+  split_grid_feasible <- outer(split_analysis_n, grid_units, `>=`)
+  feasible_som_fits <- as.integer(
+    sum(split_grid_feasible) * length(specification$seeds)
+  )
+  model_budget <- length(resamples$splits) *
+    nrow(expand_som_spec(specification))
+  infeasible_som_fits <- as.integer(model_budget - feasible_som_fits)
+  max_pairwise_comparisons <- .gui_integer(
+    config$max_pairwise_comparisons %||% 1000000L,
+    "max_pairwise_comparisons"
+  )
+  planned_pairwise_comparisons <- choose(as.double(model_budget), 2) *
+    length(unique(specification$k))
+  pairwise_budget_ok <- is.finite(planned_pairwise_comparisons) &&
+    planned_pairwise_comparisons <= max_pairwise_comparisons
+
+  analysis_keys <- vapply(resamples$splits, function(split) {
+    paste(sort(unique(split$analysis)), collapse = ",")
+  }, character(1))
+  duplicate_analysis_splits <- as.integer(sum(duplicated(analysis_keys)))
+
+  cross_model_feasible_splits <- NA_integer_
+  if (length(config$cross_models)) {
+    largest_k <- max(specification$k)
+    cross_model_feasible_splits <- as.integer(sum(vapply(
+      resamples$splits,
+      function(split) {
+        analysis <- split$analysis
+        if (length(analysis) <= largest_k) return(FALSE)
+        prepared <- tryCatch(
+          .reference_matrix(
+            data, analysis, preprocessing,
+            specification$layer_weights,
+            specification$normalize_layers
+          ),
+          error = function(e) e
+        )
+        !inherits(prepared, "error")
+      },
+      logical(1)
+    )))
+  }
+
   notes <- character()
-  if (anyNA(selected) && length(config$cross_models)) {
+  if (infeasible_som_fits > 0L && feasible_som_fits > 0L) {
     notes <- c(
       notes,
-      paste0(
-        "Missing predictors are retained for SOM distance calculations. ",
-        "Cross-model references require complete analysis rows and may fail."
+      sprintf(
+        paste0(
+          "%d of %d planned SOM fits do not meet the structural prerequisite ",
+          "that analysis rows must be at least the number of map units."
+        ),
+        infeasible_som_fits, model_budget
+      )
+    )
+  }
+  if (duplicate_analysis_splits > 0L) {
+    notes <- c(
+      notes,
+      sprintf(
+        paste0(
+          "%d resampling split%s repeat%s an earlier analysis set and ",
+          "therefore do%s not add a distinct data perturbation."
+        ),
+        duplicate_analysis_splits,
+        if (duplicate_analysis_splits == 1L) "" else "s",
+        if (duplicate_analysis_splits == 1L) "s" else "",
+        if (duplicate_analysis_splits == 1L) "es" else ""
+      )
+    )
+  }
+  if (length(config$cross_models) &&
+        cross_model_feasible_splits < length(resamples$splits)) {
+    notes <- c(
+      notes,
+      sprintf(
+        paste0(
+          "%d of %d resampling splits pass split-specific preprocessing and ",
+          "have more analysis rows than the largest requested k (%d) for the ",
+          "cross-model references. This is a computational eligibility check, ",
+          "not a scientific assessment."
+        ),
+        cross_model_feasible_splits,
+        length(resamples$splits),
+        max(specification$k)
       )
     )
   }
@@ -298,16 +379,136 @@
         !requireNamespace("mclust", quietly = TRUE)) {
     notes <- c(notes, "GMM requires the suggested package `mclust`.")
   }
-  model_budget <- length(resamples$splits) *
-    nrow(expand_som_spec(specification))
   list(
     data = data,
     preprocessing = preprocessing,
     resamples = resamples,
     specification = specification,
     model_budget = model_budget,
+    planned_pairwise_comparisons = planned_pairwise_comparisons,
+    max_pairwise_comparisons = max_pairwise_comparisons,
+    pairwise_budget_ok = pairwise_budget_ok,
+    feasible_som_fits = feasible_som_fits,
+    infeasible_som_fits = infeasible_som_fits,
+    duplicate_analysis_splits = duplicate_analysis_splits,
+    cross_model_feasible_splits = cross_model_feasible_splits,
     notes = unique(notes)
   )
+}
+
+.gui_preflight_result <- function(config, raw) {
+  tryCatch(
+    {
+      prepared <- .prepare_gui_analysis(config, raw)
+      if (prepared$feasible_som_fits == 0L) {
+        return(list(
+          ok = FALSE,
+          prepared = prepared,
+          error = paste0(
+            "No planned SOM fit meets the structural prerequisite that the ",
+            "analysis split contain at least as many rows as map units. ",
+            "Use a smaller grid or a design with more analysis rows."
+          )
+        ))
+      }
+      if (!prepared$pairwise_budget_ok) {
+        return(list(
+          ok = FALSE,
+          prepared = prepared,
+          error = paste0(
+            "The planned workflow would create ",
+            format(prepared$planned_pairwise_comparisons, trim = TRUE),
+            " pairwise partition comparisons, exceeding the limit of ",
+            format(prepared$max_pairwise_comparisons, trim = TRUE),
+            ". Reduce seeds, grids, resampling splits or candidate k values."
+          )
+        ))
+      }
+      list(ok = TRUE, prepared = prepared)
+    },
+    error = function(e) list(ok = FALSE, error = conditionMessage(e))
+  )
+}
+
+.format_gui_preflight_status <- function(result) {
+  if (!isTRUE(result$ok)) {
+    lines <- c("Preflight not ready.")
+    if (!is.null(result$prepared)) {
+      prepared <- result$prepared
+      lines <- c(
+        lines,
+        sprintf(
+          paste0(
+            "SOM structure: %d planned fits; %d structurally feasible; ",
+            "%d structurally ineligible."
+          ),
+          prepared$model_budget,
+          prepared$feasible_som_fits,
+          prepared$infeasible_som_fits
+        ),
+        sprintf(
+          "Pairwise budget: %s planned; limit %s.",
+          format(prepared$planned_pairwise_comparisons, trim = TRUE),
+          format(prepared$max_pairwise_comparisons, trim = TRUE)
+        )
+      )
+    }
+    return(paste(c(lines, paste0("Resolve: ", result$error)), collapse = "\n"))
+  }
+
+  prepared <- result$prepared
+  lines <- c(
+    if (length(prepared$notes)) {
+      "Preflight ready with review items."
+    } else {
+      "Preflight ready."
+    },
+    sprintf(
+      "%d samples; %d predictors; %d resampling splits.",
+      nrow(prepared$data$metadata),
+      ncol(prepared$data$layers$data),
+      length(prepared$resamples$splits)
+    ),
+    sprintf(
+      paste0(
+        "SOM structure: %d planned fits; %d structurally feasible; ",
+        "%d structurally ineligible."
+      ),
+      prepared$model_budget,
+      prepared$feasible_som_fits,
+      prepared$infeasible_som_fits
+    ),
+    sprintf(
+      "Pairwise budget: %s planned; limit %s.",
+      format(prepared$planned_pairwise_comparisons, trim = TRUE),
+      format(prepared$max_pairwise_comparisons, trim = TRUE)
+    )
+  )
+  if (!is.na(prepared$cross_model_feasible_splits)) {
+    lines <- c(
+      lines,
+      sprintf(
+        paste0(
+          "Cross-model prerequisites: %d/%d splits pass split-specific ",
+          "preprocessing and have more rows than the largest requested k (%d)."
+        ),
+        prepared$cross_model_feasible_splits,
+        length(prepared$resamples$splits),
+        max(prepared$specification$k)
+      )
+    )
+  }
+  lines <- c(
+    lines,
+    sprintf(
+      "Repeated analysis sets beyond the first: %d.",
+      prepared$duplicate_analysis_splits
+    )
+  )
+  if (length(prepared$notes)) {
+    lines <- c(lines, paste0("Review: ", prepared$notes))
+  }
+  paste(lines, collapse = "\n")
 }
 
 .gui_workflow_diagnostics <- function(workflow) {
@@ -356,21 +557,22 @@
   ))
   lines <- c(
     sprintf(
-      "SOM fits: %d/%d succeeded; %d failed; %d warnings.",
+      "SOM fits: %d/%d succeeded; %d failed; %s.",
       successful_som, workflow$ensemble$expected_models,
-      nrow(workflow$ensemble$failures), nrow(workflow$ensemble$warnings)
+      nrow(workflow$ensemble$failures),
+      .count_noun(nrow(workflow$ensemble$warnings), "warning")
     ),
     sprintf(
-      "Consensus: %d succeeded; %d failed.",
+      "Consensus: %d computed; %d not computed.",
       length(workflow$consensus), nrow(workflow$consensus_failures)
     )
   )
   if (!is.null(workflow$cross_models)) {
     lines <- c(lines, sprintf(
-      "Cross-model fits: %d succeeded; %d failed; %d warnings.",
+      "Cross-model fits: %d succeeded; %d failed; %s.",
       length(workflow$cross_models$records),
       nrow(workflow$cross_models$failures),
-      nrow(workflow$cross_models$warnings)
+      .count_noun(nrow(workflow$cross_models$warnings), "warning")
     ))
   } else {
     lines <- c(lines, "Cross-model fits: not requested.")
@@ -405,6 +607,22 @@
 
 .code_value <- function(x) paste(deparse(x, width.cutoff = 500L), collapse = "")
 
+.gui_configuration_snapshot <- function(config) {
+  reserved <- c("snapshot_type", "snapshot_note")
+  config[reserved] <- NULL
+  c(
+    list(
+      snapshot_type = "SOMevidence GUI configuration snapshot",
+      snapshot_note = paste0(
+        "This snapshot documents the settings used for a run. ",
+        "SOMevidence 1.1.x cannot import it to restore GUI controls; ",
+        "use the exported R script as the executable analysis record."
+      )
+    ),
+    config
+  )
+}
+
 .render_gui_script <- function(config) {
   metadata_expression <- function(column) {
     if (is.null(column)) "NULL" else sprintf("raw[[%s]]", .code_value(column))
@@ -434,7 +652,8 @@
         "input_path)"
       ),
       "}",
-      "raw <- utils::read.csv(input_path, check.names = FALSE)"
+      "input_lines <- readLines(input_path, warn = FALSE)",
+      "raw <- utils::read.csv(text = input_lines, check.names = FALSE)"
     )
   }
   resample_arguments <- c(
@@ -457,9 +676,20 @@
   }
   package_version <- config$package_version %||%
     as.character(utils::packageVersion("SOMevidence"))
+  max_pairwise_comparisons <- .gui_integer(
+    config$max_pairwise_comparisons %||% 1000000L,
+    "max_pairwise_comparisons"
+  )
 
   c(
-    sprintf("# GUI configuration schema: %d", config$schema_version %||% 1L),
+    sprintf(
+      "# GUI configuration snapshot schema: %d",
+      config$schema_version %||% 1L
+    ),
+    paste0(
+      "# The 1.1.x GUI cannot import this snapshot to restore controls; ",
+      "this script is the executable record."
+    ),
     sprintf("# Generated with SOMevidence %s", package_version),
     "library(SOMevidence)",
     sprintf(
@@ -512,9 +742,39 @@
     "workflow <- run_som_workflow(",
     "  data, specification, resamples,",
     "  preprocess = preprocessing,",
-    sprintf("  cross_models = %s", .code_value(config$cross_models)),
+    sprintf("  cross_models = %s,", .code_value(config$cross_models)),
+    sprintf(
+      "  max_pairwise_comparisons = %dL",
+      max_pairwise_comparisons
+    ),
     ")",
     "workflow"
+  )
+}
+
+.read_gui_csv <- function(path) {
+  if (!is.character(path) || length(path) != 1L || is.na(path) || !nzchar(path)) {
+    .abort("Select one CSV file before continuing.")
+  }
+  read_error <- function() {
+    .abort(paste0(
+      "The CSV could not be read. Confirm that it is a comma-separated ",
+      "text file with a header row, consistent columns, and a supported ",
+      "text encoding."
+    ))
+  }
+  tryCatch(
+    {
+      lines <- withCallingHandlers(
+        readLines(path, warn = FALSE),
+        warning = function(w) read_error()
+      )
+      withCallingHandlers(
+        utils::read.csv(text = lines, check.names = FALSE),
+        warning = function(w) read_error()
+      )
+    },
+    error = function(e) read_error()
   )
 }
 
@@ -522,13 +782,18 @@
 #'
 #' The Shiny interface exposes a compact subset of the package workflow for
 #' teaching and exploratory configuration. Every completed run can export its
-#' exact R script and a YAML configuration. The exported script, not the GUI
-#' session, is the reproducible analysis record.
+#' exact R script and a YAML configuration snapshot. Version 1.1.x cannot
+#' import that snapshot to restore GUI controls. The exported script, not the
+#' GUI session or snapshot, is the executable analysis record. The interface is
+#' designed for a local R session, and `SOMevidence` sends no telemetry. In a
+#' local session, selected files remain on the local computer. A remotely
+#' deployed Shiny application transfers selected files to its host, whose
+#' operator is responsible for access controls and data handling.
 #'
 #' @section Lifecycle:
-#' Experimental. The interface and its exported configuration schema may
-#' change after independent usability testing. The ordinary R API remains the
-#' authoritative analysis interface.
+#' Experimental. The interface and its exported configuration snapshot schema
+#' may change after independent usability testing. The ordinary R API remains
+#' the authoritative analysis interface.
 #'
 #' @return A `shiny.appobj`. Pass it to [shiny::runApp()] or print it in an
 #'   interactive R session. The application does not return an analysis result;
@@ -545,7 +810,8 @@ launch_som_app <- function() {
   ui <- shiny::fluidPage(
     shiny::tags$head(shiny::tags$style(shiny::HTML(paste0(
       ".somevidence-table-scroll { overflow-x: auto; width: 100%; } ",
-      ".somevidence-table-scroll table { white-space: nowrap; }"
+      ".somevidence-table-scroll table { white-space: nowrap; } ",
+      ".somevidence-footer { color: #666; font-size: 0.9em; margin-top: 1em; }"
     )))),
     shiny::titlePanel("SOM evidence workflow"),
     shiny::sidebarLayout(
@@ -627,7 +893,14 @@ launch_som_app <- function() {
         ),
         shiny::actionButton("run", "Run workflow"),
         shiny::downloadButton("download_r", "Export R script"),
-        shiny::downloadButton("download_yaml", "Export YAML")
+        shiny::downloadButton(
+          "download_yaml", "Export configuration snapshot"
+        ),
+        shiny::helpText(
+          "The R script is the executable record. The YAML configuration ",
+          "snapshot documents the selected settings; SOMevidence 1.1.x ",
+          "cannot import it to restore GUI controls."
+        )
       ),
       shiny::mainPanel(
         shiny::h4("Data preflight"),
@@ -670,6 +943,18 @@ launch_som_app <- function() {
           shiny::tableOutput("cross_table")
         )
       )
+    ),
+    shiny::tags$footer(
+      class = "somevidence-footer",
+      shiny::tags$hr(),
+      shiny::tags$p(
+        paste0(
+          "Experimental interface | SOMevidence ",
+          as.character(utils::packageVersion("SOMevidence")),
+          " | Designed for a local R session | No telemetry is sent by ",
+          "SOMevidence."
+        )
+      )
     )
   )
 
@@ -684,7 +969,7 @@ launch_som_app <- function() {
     raw_data <- shiny::reactive({
       if (input$data_source == "built_in") return(built_in())
       shiny::req(input$file)
-      utils::read.csv(input$file$datapath, check.names = FALSE)
+      .read_gui_csv(input$file$datapath)
     })
     shiny::observeEvent(raw_data(), {
       raw <- raw_data()
@@ -745,7 +1030,8 @@ launch_som_app <- function() {
         seeds = .parse_integer_set(input$seeds, "seeds"),
         rlen = .gui_integer(input$rlen, "rlen", lower = 10L),
         k = .parse_integer_set(input$k, "k", lower = 2L),
-        cross_models = input$cross_models %||% character()
+        cross_models = input$cross_models %||% character(),
+        max_pairwise_comparisons = 1000000L
       )
     })
     preflight <- shiny::reactive({
@@ -759,41 +1045,14 @@ launch_som_app <- function() {
           )
         ))
       }
-      tryCatch(
-        list(
-          ok = TRUE,
-          prepared = .prepare_gui_analysis(gui_config(), raw)
-        ),
-        error = function(e) list(ok = FALSE, error = conditionMessage(e))
-      )
+      .gui_preflight_result(gui_config(), raw)
     })
 
     output$data_audit <- shiny::renderTable({
       .gui_data_audit(raw_data(), input$predictors)
     }, striped = TRUE, bordered = TRUE, rownames = FALSE)
     output$preflight_status <- shiny::renderText({
-      result <- preflight()
-      if (!isTRUE(result$ok)) {
-        return(paste("Preflight not ready:", result$error))
-      }
-      prepared <- result$prepared
-      lines <- c(
-        "Preflight passed.",
-        sprintf(
-          paste0(
-            "%d samples; %d predictors; %d resampling splits; ",
-            "%d planned SOM fits."
-          ),
-          nrow(prepared$data$metadata),
-          ncol(prepared$data$layers$data),
-          length(prepared$resamples$splits),
-          prepared$model_budget
-        )
-      )
-      if (length(prepared$notes)) {
-        lines <- c(lines, paste0("Review: ", prepared$notes))
-      }
-      paste(lines, collapse = "\n")
+      .format_gui_preflight_status(preflight())
     })
 
     analysis <- shiny::eventReactive(input$run, {
@@ -810,6 +1069,7 @@ launch_som_app <- function() {
             prepared$resamples,
             preprocess = prepared$preprocessing,
             cross_models = config$cross_models,
+            max_pairwise_comparisons = prepared$max_pairwise_comparisons,
             keep_models = FALSE
           )
         }
@@ -879,12 +1139,15 @@ launch_som_app <- function() {
       }
     )
     output$download_yaml <- shiny::downloadHandler(
-      filename = function() "som_workflow.yml",
+      filename = function() "som_workflow_configuration_snapshot.yml",
       content = function(file) {
         if (!requireNamespace("yaml", quietly = TRUE)) {
-          .abort("Install `yaml` to export the configuration.")
+          .abort("Install `yaml` to export the configuration snapshot.")
         }
-        yaml::write_yaml(analysis()$config, file)
+        yaml::write_yaml(
+          .gui_configuration_snapshot(analysis()$config),
+          file
+        )
       }
     )
   }
