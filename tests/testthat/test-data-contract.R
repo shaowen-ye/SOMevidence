@@ -17,6 +17,46 @@ test_that("som_data separates training layers from design metadata", {
   ))
 })
 
+test_that("named external labels are aligned by sample identity", {
+  ids <- paste0("sample_", seq_len(4L))
+  labels <- stats::setNames(c("a", "b", "c", "d"), ids)
+  reordered <- labels[rev(ids)]
+  data <- som_data(
+    matrix(seq_len(8L), nrow = 4L),
+    id = ids,
+    external_label = reordered
+  )
+
+  expect_identical(data$metadata$external_label, unname(labels))
+  expect_identical(data$external_label_source, "named_id")
+  positional <- som_data(
+    matrix(seq_len(8L), nrow = 4L),
+    id = ids,
+    external_label = unname(labels)
+  )
+  expect_identical(positional$external_label_source, "position")
+  expect_error(
+    som_data(
+      matrix(seq_len(8L), nrow = 4L),
+      id = ids,
+      external_label = stats::setNames(unname(labels), c(ids[-1L], ""))
+    ),
+    "unique, non-empty",
+    fixed = TRUE
+  )
+  expect_error(
+    som_data(
+      matrix(seq_len(8L), nrow = 4L),
+      id = ids,
+      external_label = stats::setNames(
+        unname(labels), c(ids[-1L], "outside")
+      )
+    ),
+    "must match `id` exactly",
+    fixed = TRUE
+  )
+})
+
 test_that("som_data records whether identifiers are stable", {
   generated <- som_data(matrix(seq_len(12), nrow = 4))
   expect_identical(generated$id_source, "generated")

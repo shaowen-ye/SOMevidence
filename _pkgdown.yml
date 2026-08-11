@@ -39,6 +39,7 @@ reference:
     contents:
       - fit_som_ensemble
       - audit_som
+      - audit_som_representation
       - plot_som_plane
       - pareto_candidates
   - title: Partitions and consensus
@@ -68,6 +69,7 @@ reference:
       - run_som_workflow
       - summary.som_workflow
       - run_som_sensitivity
+      - upgrade_som_object
   - title: Teaching, examples and interface
     contents:
       - simulate_som_scenario

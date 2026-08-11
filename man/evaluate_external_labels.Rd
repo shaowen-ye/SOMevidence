@@ -4,25 +4,54 @@
 \alias{evaluate_external_labels}
 \title{Compare a consensus partition with external ecological labels}
 \usage{
-evaluate_external_labels(consensus, labels = NULL, exclude = NULL)
+evaluate_external_labels(
+  consensus,
+  labels = NULL,
+  exclude = NULL,
+  label_ids = NULL,
+  match_by = c("auto", "id", "position")
+)
 }
 \arguments{
 \item{consensus}{A \code{som_consensus} object.}
 
-\item{labels}{Optional external labels in sample order. By default, the
-\code{external_label} field supplied to \code{\link[=som_data]{som_data()}} is used.}
+\item{labels}{Optional external labels. By default, the \code{external_label}
+field supplied to \code{\link[=som_data]{som_data()}} is used. Supplied labels should be matched
+by stable sample IDs through \code{label_ids} or complete \code{names(labels)}.}
 
 \item{exclude}{Optional label values to omit, such as an explicit unknown
 category. Missing labels and samples without at least two analysis-scope
 assignments are always omitted and counted because one assignment cannot
 provide consensus evidence.}
+
+\item{label_ids}{Optional unique sample identifiers corresponding to
+\code{labels}. They may be in any order and may describe a subset of consensus
+samples. IDs not present in the consensus are rejected.}
+
+\item{match_by}{Matching rule. \code{"auto"} uses IDs when available. For an
+unnamed full-length label vector it warns and retains legacy positional
+matching. Use \code{"id"} to require identity matching or \code{"position"} to make
+full-length positional matching explicit.}
 }
 \value{
 A \code{som_external_assessment} object containing the contingency table,
-long-form cluster composition, ARI, AMI and sample accounting.
+long-form cluster composition, ARI, AMI, resolved matching information and
+mutually exclusive sample-omission accounting.
 }
 \description{
 External labels are evaluated only after SOM fitting and consensus
 construction. ARI and AMI quantify agreement; neither is called accuracy,
 and agreement does not make the external labels ecological ground truth.
+}
+\examples{
+data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 9)
+ensemble <- fit_som_ensemble(
+  data, som_spec(c(3, 2), seeds = 10:11, rlen = 10, k = 2)
+)
+consensus <- consensus_som(partition_som(ensemble), k = 2)
+labels <- stats::setNames(
+  data$metadata$external_label,
+  data$metadata$id
+)
+evaluate_external_labels(consensus, labels[sample(names(labels))])
 }

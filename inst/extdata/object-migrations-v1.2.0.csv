@@ -1,0 +1,7 @@
+class,from_contract,to_contract,automatic,rule
+som_data,legacy,1.2.0,yes,Record legacy external-label provenance without changing labels.
+som_resamples,legacy,1.2.0,conditional,Recover ordered sample IDs only from the verified originating data context.
+som_partitions,legacy,1.2.0,yes,Record an unknown historical pairwise-comparison budget as missing.
+som_consensus,legacy,1.2.0,conditional,Recover sample IDs only when consensus metadata provide a valid identity vector.
+som_external_assessment,legacy,1.2.0,no,Recompute because record-level identity matching and omission states were not retained.
+som_workflow,legacy,1.2.0,conditional,Upgrade nested objects and preserve one verified shared ensemble provenance.

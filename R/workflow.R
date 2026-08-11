@@ -191,7 +191,7 @@ run_som_workflow <- function(
       NA_character_
     }
   }, character(1))
-  output <- structure(
+  output <- .new_som_object(
     list(
       ensemble = ensemble,
       audit = audit,
@@ -215,7 +215,7 @@ run_som_workflow <- function(
         )
       )
     ),
-    class = "som_workflow"
+    "som_workflow"
   )
   output
 }
@@ -508,7 +508,7 @@ summary.som_workflow <- function(object, ...) {
   requested_k <- object$requested_k %||% .workflow_requested_k(object)
   consensus <- .workflow_consensus_summary(object, requested_k)
   cross_models <- .workflow_cross_model_summary(object)
-  structure(
+  .new_som_object(
     list(
       som = som,
       consensus = consensus,
@@ -1187,7 +1187,7 @@ run_som_sensitivity <- function(
     )
   }
 
-  structure(
+  .new_som_object(
     list(
       representation = bind_summary("representation"),
       partition = bind_summary("partition"),
@@ -1200,7 +1200,7 @@ run_som_sensitivity <- function(
       model_warnings = bind_diagnostics(model_warnings),
       workflows = if (keep_workflows) workflows else NULL
     ),
-    class = "som_sensitivity"
+    "som_sensitivity"
   )
 }
 

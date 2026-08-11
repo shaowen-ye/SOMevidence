@@ -112,7 +112,7 @@ som_spec <- function(grids = data.frame(xdim = 7L, ydim = 5L),
   }
   .assert_scalar_integer(cores, "cores", lower = 1)
 
-  structure(
+  .new_som_object(
     list(
       grids = grids,
       seeds = seeds,
@@ -129,7 +129,7 @@ som_spec <- function(grids = data.frame(xdim = 7L, ydim = 5L),
       normalize_layers = normalize_layers,
       cores = as.integer(cores)
     ),
-    class = "som_spec"
+    "som_spec"
   )
 }
 

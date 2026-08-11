@@ -49,13 +49,14 @@ variables <- c(
 )
 keep <- stats::complete.cases(raw[, c(variables, "species", "year")])
 penguins <- raw[keep, , drop = FALSE]
+sample_ids <- sprintf("penguin_%03d", seq_len(nrow(penguins)))
 
 morphology <- som_data(
   x = penguins[, variables],
-  id = sprintf("penguin_%03d", seq_len(nrow(penguins))),
+  id = sample_ids,
   time = penguins$year,
   domain = factor(penguins$year),
-  external_label = penguins$species
+  external_label = stats::setNames(as.character(penguins$species), sample_ids)
 )
 morphology
 ```
@@ -115,6 +116,20 @@ workflow$cross_comparison$summary
 
 transfer <- audit_transfer(workflow$ensemble)
 transfer$metrics
+
+successful_ids <- vapply(
+  Filter(function(fit) isTRUE(fit$success), workflow$ensemble$fits),
+  `[[`, character(1), "id"
+)
+representation <- audit_som_representation(
+  workflow$ensemble,
+  pairs = data.frame(
+    fit_a = successful_ids[[1]],
+    fit_b = successful_ids[[2]]
+  ),
+  neighbourhood_size = 10
+)
+representation$pairwise
 ```
 
 ```{r evidence-plots, fig.width = 7, fig.height = 4, out.width = "90%"}
@@ -127,6 +142,8 @@ Quantization and topographic errors concern the SOM representation. ARI and AMI
 between SOM and reference partitions concern agreement under a shared analysis
 design. Held-year distance and occupancy diagnostics concern transfer. None of
 these quantities is classification accuracy.
+The experimental topology comparison is likewise descriptive and applies only
+to the prespecified fit pair and jointly mapped observations shown above.
 
 ## Inspect external labels only after consensus
 

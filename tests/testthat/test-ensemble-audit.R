@@ -148,6 +148,12 @@ test_that("model failures are visible", {
 
   expect_equal(nrow(e$failures), 2)
   expect_true(all(grepl("non-negative", e$failures$error)))
+  partitions <- partition_som(e, max_pairwise_comparisons = 17L)
+  expect_identical(partitions$max_pairwise_comparisons, 17L)
+  expect_true(all(c(
+    "records", "pairwise", "stability", "method", "scope",
+    "max_pairwise_comparisons", "ensemble"
+  ) %in% names(partitions)))
 })
 
 test_that("future execution preserves explicitly seeded SOM results", {

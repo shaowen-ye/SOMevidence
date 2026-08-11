@@ -58,9 +58,9 @@ audit_transfer <- function(ensemble) {
       stringsAsFactors = FALSE
     )
   }))
-  structure(
+  .new_som_object(
     list(metrics = metrics, failures = ensemble$failures, ensemble = ensemble),
-    class = "som_transfer_audit"
+    "som_transfer_audit"
   )
 }
 

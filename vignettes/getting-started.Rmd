@@ -85,6 +85,20 @@ audit <- audit_som(ensemble)
 audit
 audit$grid_summary
 
+successful_ids <- vapply(
+  Filter(function(fit) isTRUE(fit$success), ensemble$fits),
+  `[[`, character(1), "id"
+)
+representation <- audit_som_representation(
+  ensemble,
+  pairs = data.frame(
+    fit_a = successful_ids[[1]],
+    fit_b = successful_ids[[2]]
+  ),
+  neighbourhood_size = 8
+)
+representation$pairwise
+
 partitions <- partition_som(ensemble)
 partitions
 partitions$stability
@@ -103,8 +117,10 @@ comparison$summary
 ```
 
 Quantization error, topographic error and empty-unit rate describe different
-properties of the representation. ARI describes agreement between partitions;
-it is not classification accuracy and it does not establish ecological truth.
+properties of each representation. The experimental cross-fit audit describes
+whether prespecified maps preserve similar sample topology; it supplies no
+ranking or automatic selection. ARI describes agreement between partitions; it
+is not classification accuracy and it does not establish ecological truth.
 
 Pareto selection retains candidates that are not dominated across the stated
 criteria. It does not collapse the evidence into a weighted score or a model

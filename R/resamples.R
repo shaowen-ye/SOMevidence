@@ -148,7 +148,7 @@ som_resamples <- function(data,
     ), call. = FALSE)
   }
 
-  structure(
+  .new_som_object(
     list(
       method = method,
       splits = out,
@@ -158,7 +158,7 @@ som_resamples <- function(data,
       n_unique_analysis_splits = as.integer(n_unique_analysis_splits),
       duplicate_analysis_splits = duplicate_analysis_splits
     ),
-    class = "som_resamples"
+    "som_resamples"
   )
 }
 
