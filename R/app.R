@@ -723,7 +723,7 @@
       snapshot_type = "SOMevidence GUI configuration snapshot",
       snapshot_note = paste0(
         "This snapshot documents the settings used for a run. ",
-        "SOMevidence 1.1.x cannot import it to restore GUI controls; ",
+        "The GUI cannot currently import it to restore controls; ",
         "use the exported R script as the executable analysis record."
       )
     ),
@@ -795,7 +795,7 @@
       config$schema_version %||% 1L
     ),
     paste0(
-      "# The 1.1.x GUI cannot import this snapshot to restore controls; ",
+      "# The GUI cannot currently import this snapshot to restore controls; ",
       "this script is the executable record."
     ),
     sprintf("# Generated with SOMevidence %s", package_version),
@@ -890,11 +890,11 @@
 #'
 #' The Shiny interface exposes a compact subset of the package workflow for
 #' teaching and exploratory configuration. Every completed run can export its
-#' exact R script and a YAML configuration snapshot. Version 1.1.x cannot
-#' import that snapshot to restore GUI controls. The exported script, not the
-#' GUI session or snapshot, is the executable analysis record. The interface is
-#' designed for a local R session, and `SOMevidence` sends no telemetry. In a
-#' local session, selected files remain on the local computer. A remotely
+#' exact R script and a YAML configuration snapshot. The GUI cannot currently
+#' import that snapshot to restore its controls. The exported script, not the
+#' GUI session or snapshot, is the executable analysis record. The interface
+#' is designed for a local R session, and `SOMevidence` sends no telemetry. In
+#' a local session, selected files remain on the local computer. A remotely
 #' deployed Shiny application transfers selected files to its host, whose
 #' operator is responsible for access controls and data handling.
 #'
@@ -1006,8 +1006,8 @@ launch_som_app <- function() {
         ),
         shiny::helpText(
           "The R script is the executable record. The YAML configuration ",
-          "snapshot documents the selected settings; SOMevidence 1.1.x ",
-          "cannot import it to restore GUI controls."
+          "snapshot documents the selected settings; the GUI cannot ",
+          "currently import it to restore controls."
         )
       ),
       shiny::mainPanel(

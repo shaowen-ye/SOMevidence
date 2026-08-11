@@ -3,7 +3,11 @@
 #' @param x A numeric matrix or data frame for a single-layer analysis.
 #' @param layers A named list of numeric matrices or data frames. Use either
 #'   `x` or `layers`, not both.
-#' @param id Optional unique sample identifiers.
+#' @param id Optional unique sample identifiers. Supplying `id` explicitly is
+#'   recommended for scientific analyses. If it is omitted, informative row
+#'   names are used unless every row name follows the package-like
+#'   `sample_<integer>` or `simulation_<integer>` pattern; such fully generic
+#'   sequences are treated as generated rather than independently stable.
 #' @param group Optional sampling-group identifiers.
 #' @param time Optional time values retained as metadata.
 #' @param domain Optional monitoring-domain identifiers.
@@ -23,7 +27,9 @@
 #'   row order is treated as authoritative. The scalar `id_source` records
 #'   whether sample identifiers were supplied, taken from explicit
 #'   non-positional row names or generated locally. Stable identifiers are
-#'   required to compare different data-coverage scenarios.
+#'   required to compare different data-coverage scenarios. A mixture of
+#'   generic and study-specific row names is retained as explicit identity;
+#'   one generic name does not cause the remaining row names to be discarded.
 #' @examples
 #' x <- data.frame(temperature = 10:14, oxygen = c(9, 8, 8, 7, 6))
 #' data <- som_data(x, id = paste0("sample_", seq_len(nrow(x))))
@@ -54,7 +60,7 @@ som_data <- function(x = NULL, layers = NULL, id = NULL, group = NULL,
       as.character(rn), as.character(seq_len(nrow(layer)))
     )
     generated <- !is.null(rn) && length(rn) &&
-      any(grepl("^(sample|simulation)_[0-9]+$", rn))
+      all(grepl("^(sample|simulation)_[0-9]+$", rn))
     automatic <- rectangular && is.data.frame(layer) &&
       .row_names_info(layer, type = 1L) < 0L
     comparable <- !is.null(rn) && !automatic && !positional

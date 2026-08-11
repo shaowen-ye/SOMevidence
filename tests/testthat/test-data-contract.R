@@ -72,7 +72,25 @@ test_that("som_data records whether identifiers are stable", {
   mixed_layers <- generated$layers
   rownames(mixed_layers[[1L]])[[1L]] <- "custom_1"
   mixed_round_trip <- som_data(layers = mixed_layers)
-  expect_identical(mixed_round_trip$id_source, "generated")
+  expect_identical(mixed_round_trip$id_source, "rownames")
+  expect_identical(
+    mixed_round_trip$metadata$id,
+    rownames(mixed_layers[[1L]])
+  )
+
+  mixed_real_names <- matrix(seq_len(12), nrow = 4)
+  rownames(mixed_real_names) <- c("sample_1", "field_a", "field_b", "field_c")
+  mixed_real_rows <- som_data(mixed_real_names)
+  expect_identical(mixed_real_rows$id_source, "rownames")
+  expect_identical(
+    mixed_real_rows$metadata$id,
+    rownames(mixed_real_names)
+  )
+
+  generic_names <- matrix(seq_len(12), nrow = 4)
+  rownames(generic_names) <- paste0("sample_", seq_len(4))
+  generic_rows <- som_data(generic_names)
+  expect_identical(generic_rows$id_source, "generated")
 
   automatic_rows <- som_data(data.frame(a = 1:4, b = 5:8))
   expect_identical(automatic_rows$id_source, "generated")
