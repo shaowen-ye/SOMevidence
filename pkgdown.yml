@@ -1,0 +1,13 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  api-lifecycle: api-lifecycle.html
+  design-aware-resampling: design-aware-resampling.html
+  getting-started: getting-started.html
+  palmer-penguins: palmer-penguins.html
+  visualizing-evidence: visualizing-evidence.html
+last_built: 2026-08-11T02:18Z
+urls:
+  reference: https://shaowen-ye.github.io/SOMevidence/reference
+  article: https://shaowen-ye.github.io/SOMevidence/articles
