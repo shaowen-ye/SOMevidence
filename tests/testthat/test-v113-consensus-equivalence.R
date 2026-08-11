@@ -90,6 +90,41 @@ test_that("incremental alignment preserves ties, order, and errors", {
     expected_message,
     fixed = TRUE
   )
+
+  single <- list(list(
+    id = "only",
+    sample_labels = c(1L, 1L, 2L, 2L)
+  ))
+  expect_identical(
+    SOMevidence:::.propagate_alignment(single, 1L, 2L),
+    .v112_propagate_alignment(single, 1L, 2L)
+  )
+})
+
+test_that("incremental alignment preserves dynamic unlocking diagnostics", {
+  records <- list(
+    list(
+      id = "reference",
+      sample_labels = c(1L, 1L, 1L, 1L, 2L, 2L, NA, NA)
+    ),
+    list(
+      id = "invalid",
+      sample_labels = c(1L, 2L, 1L, 2L, NA, NA, 1L, 2L)
+    ),
+    list(
+      id = "valid",
+      sample_labels = c(1L, 1L, 1L, 1L, 2L, 2L, 1L, 2L)
+    )
+  )
+  propagated <- SOMevidence:::.propagate_alignment(records, 1L, 2L)
+
+  expect_identical(propagated$diagnostics$child_fit, c("valid", "invalid"))
+  expect_identical(
+    propagated$diagnostics$parent_fit,
+    c("reference", "reference;valid")
+  )
+  expect_identical(propagated$diagnostics$n_joint, c(6L, 10L))
+  expect_identical(propagated, .v112_propagate_alignment(records, 1L, 2L))
 })
 
 test_that("consensus dispatch and incomplete-label slow path are unchanged", {
@@ -139,6 +174,55 @@ test_that("consensus dispatch and incomplete-label slow path are unchanged", {
   expect_error(
     consensus_som(disjoint, k = 2L, method = "coassignment"),
     "Some sample pairs were never jointly assigned across the ensemble.",
+    fixed = TRUE
+  )
+})
+
+test_that("co-assignment size boundaries preserve automatic dispatch", {
+  n <- 10L
+  records <- list(
+    list(
+      id = "first", k = 2L,
+      sample_labels = rep(1:2, each = n / 2L)
+    ),
+    list(
+      id = "second", k = 2L,
+      sample_labels = rep(2:1, each = n / 2L)
+    )
+  )
+  partitions <- structure(
+    list(
+      records = records,
+      scope = "analysis",
+      ensemble = list(data = list(metadata = data.frame(
+        id = paste0("sample_", seq_len(n))
+      )))
+    ),
+    class = "som_partitions"
+  )
+
+  at_limit <- consensus_som(
+    partitions,
+    k = 2L,
+    method = "auto",
+    max_coassignment_n = n
+  )
+  above_limit <- consensus_som(
+    partitions,
+    k = 2L,
+    method = "auto",
+    max_coassignment_n = n - 1L
+  )
+  expect_identical(at_limit$method, "coassignment")
+  expect_identical(above_limit$method, "aligned_vote")
+  expect_error(
+    consensus_som(
+      partitions,
+      k = 2L,
+      method = "coassignment",
+      max_coassignment_n = n - 1L
+    ),
+    "exceeds `max_coassignment_n`",
     fixed = TRUE
   )
 })

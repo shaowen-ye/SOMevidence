@@ -144,3 +144,29 @@ test_that("reference preprocessing failures still expand over all Ward k", {
   expect_identical(references$failures$k, 2:3)
   expect_true(all(grepl("non-negative", references$failures$error)))
 })
+
+test_that("a cached Ward-tree failure remains one failure per valid k", {
+  data <- simulate_som_scenario("clusters", n = 30L, p = 3L, seed = 11355L)
+  ensemble <- fit_som_ensemble(
+    data,
+    som_spec(c(2L, 2L), seeds = 11356L, rlen = 5L, k = 2:3),
+    keep_models = FALSE
+  )
+  calls <- 0L
+  testthat::local_mocked_bindings(
+    .fit_ward_tree = function(training) {
+      calls <<- calls + 1L
+      stop("fixed Ward-tree failure", call. = FALSE)
+    },
+    .package = "SOMevidence"
+  )
+
+  references <- fit_cross_models(ensemble, methods = "ward", k = 2:3)
+
+  expect_identical(calls, 1L)
+  expect_identical(references$failures$k, 2:3)
+  expect_identical(
+    references$failures$error,
+    rep("fixed Ward-tree failure", 2L)
+  )
+})

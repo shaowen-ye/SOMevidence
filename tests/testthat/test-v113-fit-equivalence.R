@@ -198,3 +198,22 @@ test_that("discarding models omits kohonen training data without changing result
     )
   }
 })
+
+test_that("compact sequential tasks preserve the caller RNG state", {
+  data <- simulate_som_scenario("clusters", n = 36L, p = 3L, seed = 3133L)
+  specification <- som_spec(
+    c(2L, 2L),
+    seeds = c(3134L, 3135L),
+    rlen = 5L,
+    k = 2L
+  )
+  set.seed(3136L)
+  before <- .Random.seed
+  invisible(fit_som_ensemble(
+    data,
+    specification,
+    keep_models = FALSE,
+    parallel = FALSE
+  ))
+  expect_identical(.Random.seed, before)
+})

@@ -28,6 +28,13 @@ test_that("agreement metrics preserve the version 1.1.2 kernels", {
       SOMevidence:::.adjusted_mutual_info(case[[1L]], case[[2L]]),
       .v112_adjusted_mutual_info(case[[1L]], case[[2L]])
     )
+    expect_identical(
+      SOMevidence:::.partition_agreement(case[[1L]], case[[2L]]),
+      c(
+        ari = .v112_adjusted_rand(case[[1L]], case[[2L]]),
+        ami = .v112_adjusted_mutual_info(case[[1L]], case[[2L]])
+      )
+    )
   }
 })
 
