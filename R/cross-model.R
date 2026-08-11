@@ -34,12 +34,15 @@
   }, processed, weighting$effective)
   list(
     matrix = do.call(cbind, weighted),
-    processed = processed,
     fitted_preprocess = fitted,
     requested_layer_weights = weighting$requested,
     layer_mean_squared_distance = weighting$mean_squared_distance,
     effective_layer_weights = weighting$effective
   )
+}
+
+.fit_ward_tree <- function(training) {
+  stats::hclust(stats::dist(training), method = "ward.D2")
 }
 
 .nearest_centroid <- function(x, centres) {
@@ -51,7 +54,7 @@
 
 .fit_cross_partition <- function(x, analysis, method, k, seed,
                                  kmeans_nstart, kmeans_iter_max,
-                                 gmm_model_names) {
+                                 gmm_model_names, ward_tree = NULL) {
   training <- x[analysis, , drop = FALSE]
   if (anyNA(training)) {
     .abort("Cross-model training rows must be complete.")
@@ -79,7 +82,7 @@
     selected_model <- "Hartigan-Wong"
     prediction_rule <- "training assignment; nearest-centroid projection"
   } else if (method == "ward") {
-    tree <- stats::hclust(stats::dist(training), method = "ward.D2")
+    tree <- ward_tree %||% .fit_ward_tree(training)
     training_labels <- stats::cutree(tree, k = k)
     centres <- do.call(rbind, lapply(seq_len(k), function(cluster) {
       colMeans(training[training_labels == cluster, , drop = FALSE])
@@ -195,6 +198,7 @@ fit_cross_models <- function(
   record_cursor <- 0L
   failure_cursor <- 0L
   warning_cursor <- 0L
+  candidate_k_values <- sort(unique(as.integer(k)))
   for (split in ensemble$resamples$splits) {
     prepared <- tryCatch(
       .reference_matrix(
@@ -203,13 +207,22 @@ fit_cross_models <- function(
       ),
       error = function(e) e
     )
+    ward_tree_capture <- NULL
+    if (
+      "ward" %in% methods &&
+        !inherits(prepared, "error") &&
+        length(split$analysis) > min(candidate_k_values)
+    ) {
+      training <- prepared$matrix[split$analysis, , drop = FALSE]
+      ward_tree_capture <- .capture_warnings(.fit_ward_tree(training))
+    }
     for (method in methods) {
       seeds <- if (method == "kmeans") {
         as.integer(kmeans_seeds)
       } else {
         NA_integer_
       }
-      for (candidate_k in sort(unique(as.integer(k)))) {
+      for (candidate_k in candidate_k_values) {
         if (method == "gmm") {
           seeds <- .seed_from_key(gmm_seed, split$id, paste0("k", candidate_k))
         }
@@ -219,14 +232,36 @@ fit_cross_models <- function(
             if (method %in% c("kmeans", "gmm")) paste0("s", seed) else NULL,
             sep = "__"
           )
-          captured <- .capture_warnings({
-            if (inherits(prepared, "error")) stop(prepared)
-            .fit_cross_partition(
-              prepared$matrix, split$analysis, method, candidate_k, seed,
-              as.integer(kmeans_nstart), as.integer(kmeans_iter_max),
-              gmm_model_names
-            )
-          })
+          use_ward_tree <- method == "ward" &&
+            !inherits(prepared, "error") &&
+            length(split$analysis) > candidate_k &&
+            !is.null(ward_tree_capture)
+          captured <- if (
+            use_ward_tree && inherits(ward_tree_capture$value, "error")
+          ) {
+            ward_tree_capture
+          } else {
+            task_capture <- .capture_warnings({
+              if (inherits(prepared, "error")) stop(prepared)
+              .fit_cross_partition(
+                prepared$matrix, split$analysis, method, candidate_k, seed,
+                as.integer(kmeans_nstart), as.integer(kmeans_iter_max),
+                gmm_model_names,
+                ward_tree = if (use_ward_tree) {
+                  ward_tree_capture$value
+                } else {
+                  NULL
+                }
+              )
+            })
+            if (use_ward_tree && nrow(ward_tree_capture$warnings)) {
+              task_capture$warnings <- rbind(
+                ward_tree_capture$warnings,
+                task_capture$warnings
+              )
+            }
+            task_capture
+          }
           fitted <- captured$value
           if (nrow(captured$warnings)) {
             for (warning_index in seq_len(nrow(captured$warnings))) {
@@ -369,6 +404,10 @@ compare_cross_models <- function(
       cursor <- cursor + 1L
       jointly_observed <- !is.na(som_labels[index]) &
         !is.na(reference$sample_labels[index])
+      agreement <- .partition_agreement(
+        som_labels[index],
+        reference$sample_labels[index]
+      )
       rows[[cursor]] <- data.frame(
         split_id = som$split_id,
         k = som$k,
@@ -378,12 +417,8 @@ compare_cross_models <- function(
         selected_model = reference$selected_model,
         scope = scope,
         n = sum(jointly_observed),
-        ari = .adjusted_rand(
-          som_labels[index], reference$sample_labels[index]
-        ),
-        ami = .adjusted_mutual_info(
-          som_labels[index], reference$sample_labels[index]
-        ),
+        ari = agreement[["ari"]],
+        ami = agreement[["ami"]],
         stringsAsFactors = FALSE
       )
     }

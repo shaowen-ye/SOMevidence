@@ -1,4 +1,4 @@
-.v112_same_partition_from_table <- function(tab) {
+.v112_same_partition <- function(tab) {
   tab <- tab[
     rowSums(tab) > 0,
     colSums(tab) > 0,
@@ -26,7 +26,7 @@
   maximum <- 0.5 * (row_pairs + col_pairs)
   denominator <- maximum - expected
   if (abs(denominator) < .Machine$double.eps) {
-    return(if (.v112_same_partition_from_table(tab)) 1 else 0)
+    return(if (.v112_same_partition(tab)) 1 else 0)
   }
   (index - expected) / denominator
 }
@@ -37,7 +37,7 @@
   -sum(probability * log(probability))
 }
 
-.v112_expected_mutual_information <- function(tab) {
+.v112_expected_mi <- function(tab) {
   n <- as.double(sum(tab))
   row_n <- as.double(rowSums(tab))
   col_n <- as.double(colSums(tab))
@@ -82,11 +82,11 @@
         outer(row_n, col_n)[nonzero]
     )
   )
-  expected <- .v112_expected_mutual_information(tab)
+  expected <- .v112_expected_mi(tab)
   normalizer <- mean(c(.v112_label_entropy(x), .v112_label_entropy(y)))
   denominator <- normalizer - expected
   if (abs(denominator) < sqrt(.Machine$double.eps)) {
-    return(if (.v112_same_partition_from_table(tab)) 1 else 0)
+    return(if (.v112_same_partition(tab)) 1 else 0)
   }
   value <- (mutual_information - expected) / denominator
   max(-1, min(1, value))
