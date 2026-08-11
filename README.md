@@ -3,7 +3,7 @@
 [![R-universe version](https://shaowen-ye.r-universe.dev/badges/SOMevidence)](https://shaowen-ye.r-universe.dev/SOMevidence)
 [![R-CMD-check](https://github.com/shaowen-ye/SOMevidence/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/shaowen-ye/SOMevidence/actions/workflows/R-CMD-check.yaml)
 [![Test coverage](https://github.com/shaowen-ye/SOMevidence/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/shaowen-ye/SOMevidence/actions/workflows/test-coverage.yaml)
-[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 `SOMevidence` is an R package for auditing whether classifications derived from
 self-organizing maps (SOMs) meet prespecified evidence requirements under an
@@ -63,6 +63,11 @@ should not be combined into an automatic leaderboard.
 | Are conclusions sensitive to prespecified analysis choices? | Scenario ARI/AMI, shared- and all-members Jaccard, contrast coverage | Agreement and coverage higher across the stated scenarios | Stable sample IDs, prespecified scenarios, and adequate shared observations | Robustness to unexamined choices or a probability that membership is correct |
 | Does a consensus agree with labels excluded from training? | External-label ARI/AMI, contingency and composition tables | Agreement higher among evaluable samples | Labels kept outside training and joined by stable sample identity | Classification accuracy, ecological ground truth, or causation |
 | Did a candidate meet the analyst's evidence requirements? | `supported`, `abstain`, `uncertain`, and the individual gate checks | All specified checks pass; failures abstain; unavailable evidence is uncertain | Prespecified thresholds and complete evidence from the same workflow | The existence of discrete ecological types or universal scientific defensibility |
+
+Representation-level checks alone cannot support a hard partition. A supported
+decision requires traceable comparative partition evidence and at least one
+prespecified partition-quality requirement. Otherwise the missing requirement
+is reported as unavailable and `assess_defensibility()` returns `"uncertain"`.
 
 ## Installation
 

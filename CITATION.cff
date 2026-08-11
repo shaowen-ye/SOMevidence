@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use SOMevidence, please cite the software using these metadata."
 type: software
 title: "SOMevidence: Evidence Workflows for Self-Organizing Map Classification"
-version: 1.1.1
+version: 1.1.2
 date-released: 2026-08-11
 authors:
   - family-names: Ye

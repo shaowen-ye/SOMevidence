@@ -3,8 +3,8 @@
 #' `SOMevidence` wraps the training implementation in [kohonen::supersom()]
 #' with explicit data-design,
 #' preprocessing, resampling, ensemble and evidence-auditing interfaces. Its
-#' central distinction is between a reproducible continuous representation and
-#' a defensible hard partition.
+#' central distinction is between continuous-representation diagnostics and a
+#' defensible hard partition.
 #'
 #' @section API contract:
 #' The package ships machine-readable contracts for exported functions and

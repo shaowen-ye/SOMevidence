@@ -60,9 +60,12 @@ test_that("resampling designs validate units, domains and custom indices", {
   expect_output(print(full), "method    : full")
   expect_length(full$splits, 1L)
 
-  blocks <- som_resamples(
-    data, method = "block_subsample", unit = "group",
-    repeats = 3, prop = 0.6, seed = 11
+  expect_warning(
+    blocks <- som_resamples(
+      data, method = "block_subsample", unit = "group",
+      repeats = 3, prop = 0.6, seed = 11
+    ),
+    "repeat an earlier analysis set"
   )
   expect_length(blocks$splits, 3L)
   expect_error(
@@ -113,7 +116,7 @@ test_that("print methods expose evidence boundaries", {
   references <- fit_cross_models(ensemble, methods = c("kmeans", "ward"), k = 2)
   comparison <- compare_cross_models(partitions, references)
   external <- evaluate_external_labels(consensus)
-  gate <- som_gate(min_success_rate = 1)
+  gate <- som_gate(min_median_ari = 0, min_success_rate = 1)
   decision <- assess_defensibility(audit, partitions, 2, gate, consensus, comparison)
 
   expect_output(print(ensemble), "failed")

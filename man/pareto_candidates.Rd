@@ -11,13 +11,21 @@ pareto_candidates(
 )
 }
 \arguments{
-\item{x}{A \code{som_audit} object or data frame.}
+\item{x}{A \code{som_audit} object or a data frame of comparable candidates.}
 
 \item{metrics}{Named character vector whose values are \code{"min"} or \code{"max"}.}
 }
 \value{
-The non-dominated rows, with a \code{pareto} column.
+The non-dominated rows, with a \code{pareto} column. Results derived from
+a \code{som_audit} also carry a \code{comparison_scope} attribute.
 }
 \description{
-Identify Pareto-efficient SOM candidates
+When \code{x} is a \code{som_audit}, fit-level metrics are directly comparable only
+when every successful fit uses the same analysis rows. To preserve the
+established interface, an audit with distinct analysis sets still returns
+its exploratory fit-level frontier, but emits a warning and marks the result
+with \code{attr(result, "comparison_scope") == "distinct_analysis_sets"}. Such a
+frontier must not be used to choose a configuration. Instead, construct
+prespecified configuration-level summaries over identical successful split
+and seed coverage, then pass that justified comparable data frame.
 }

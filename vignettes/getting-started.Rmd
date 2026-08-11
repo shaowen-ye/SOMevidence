@@ -108,10 +108,21 @@ it is not classification accuracy and it does not establish ecological truth.
 
 Pareto selection retains candidates that are not dominated across the stated
 criteria. It does not collapse the evidence into a weighted score or a model
-leaderboard.
+leaderboard. Because the fitted ensemble uses distinct resamples, fit-level
+metrics are not compared directly. Configuration summaries must cover the same
+successful resamples and random starts. All planned fits succeeded in this
+worked example before the grid-level medians are compared.
 
 ```{r pareto}
-pareto_candidates(audit)
+stopifnot(audit$success_rate == 1)
+pareto_candidates(
+  audit$grid_summary,
+  metrics = c(
+    median_quantization_error = "min",
+    median_topographic_error = "min",
+    median_empty_unit_rate = "min"
+  )
+)
 ```
 
 ## A conclusion may be withheld

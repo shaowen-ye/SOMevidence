@@ -316,8 +316,9 @@ fit_cross_models <- function(
 #'   a separate mapping-transfer diagnostic.
 #'
 #' @return A `som_cross_comparison` containing ARI and AMI effect sizes,
-#'   summaries, reference-fit success rates and source-partition completeness.
-#'   Neither agreement metric is reported as accuracy.
+#'   summaries, reference-fit success rates, source-partition completeness and
+#'   source-partition provenance. Neither agreement metric is reported as
+#'   accuracy.
 #' @examples
 #' data <- simulate_som_scenario("clusters", n = 45, p = 3, seed = 5)
 #' specification <- som_spec(c(3, 2), seeds = 1:2, rlen = 10, k = 2)
@@ -472,6 +473,8 @@ compare_cross_models <- function(
       methods = cross_models$methods,
       reference_status = reference_status,
       partition_completeness = partition_completeness,
+      partition_method = partitions$partition_method %||% partitions$method,
+      partition_records = partitions$records,
       scope = scope,
       ensemble = partitions$ensemble
     ),

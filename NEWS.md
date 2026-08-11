@@ -1,3 +1,33 @@
+# SOMevidence 1.1.2
+
+## Scientific decision guards
+
+- Prevents representation-only evidence gates from returning `supported` for
+  a hard partition. A supported decision now requires traceable comparative
+  partition evidence and at least one prespecified partition-quality rule;
+  unavailable evidence produces an `uncertain` decision.
+- Verifies from explicit partition-method provenance and candidate records that
+  partitions, consensus and cross-model comparisons supplied to one decision
+  derive from the same partitioning pipeline.
+- Prevents fit-level Pareto selection from silently comparing fits trained on
+  distinct analysis rows. For compatibility, the established audit interface
+  returns an explicitly warned and annotated exploratory frontier; scientific
+  selection should use comparable configuration summaries instead.
+- Blocks the experimental GUI before fitting when selected predictors contain
+  missing values, because the 1.1.x interface does not expose a missing-
+  distance policy.
+- Checks preprocessing and layer-weight prerequisites within every GUI analysis
+  split, and blocks a requested cross-model analysis when no split is eligible.
+- Records and warns about repeated analysis sets in resampling objects; the GUI
+  blocks designs that would overweight duplicate data perturbations.
+- Describes the current representation layer as diagnostics rather than
+  claiming cross-fit reproducibility metrics that are not yet implemented.
+- Makes CI success conditional on a complete `R CMD check` log, disables the
+  network-dependent remote incoming query in the routine matrix, and adds PDF-
+  manual and manually triggered remote CRAN preflight checks.
+- Pins third-party GitHub Actions to immutable commits and adds explicit job
+  timeouts.
+
 # SOMevidence 1.1.1
 
 ## Computation and reporting

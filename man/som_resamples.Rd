@@ -37,7 +37,9 @@ blocks. \code{block_subsample} does not infer blocks from row order.}
 optional \code{assessment} row indices.}
 }
 \value{
-A \code{som_resamples} object.
+A \code{som_resamples} object. The object records the number of distinct
+analysis sets in \code{n_unique_analysis_splits} and identifies repeated sets
+in \code{duplicate_analysis_splits}.
 }
 \description{
 Construct design-aware resamples

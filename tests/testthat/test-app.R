@@ -235,7 +235,7 @@ test_that("GUI data audit and preflight expose risky inputs before fitting", {
   ]
   expect_identical(
     missing_status,
-    "Review"
+    "Not ready"
   )
   expect_identical(audit$Result[audit$Check == "Constant predictors"], "y")
 
@@ -262,24 +262,32 @@ test_that("GUI data audit and preflight expose risky inputs before fitting", {
     k = 2L,
     cross_models = "ward"
   )
-  prepared <- SOMevidence:::.prepare_gui_analysis(config, raw)
+  expect_error(
+    SOMevidence:::.prepare_gui_analysis(config, raw),
+    "must be complete"
+  )
+  complete_raw <- raw
+  complete_raw$x[[1L]] <- 0
+  prepared <- SOMevidence:::.prepare_gui_analysis(config, complete_raw)
   expect_s3_class(prepared$data, "som_data")
   expect_s3_class(prepared$resamples, "som_resamples")
   expect_equal(prepared$model_budget, 4L)
   expect_identical(prepared$feasible_som_fits, 4L)
   expect_identical(prepared$infeasible_som_fits, 0L)
+  expect_identical(prepared$preprocessing_feasible_splits, 2L)
+  expect_equal(nrow(prepared$preprocessing_failures), 0L)
   expect_type(prepared$duplicate_analysis_splits, "integer")
   expect_type(prepared$cross_model_feasible_splits, "integer")
   expect_match(paste(prepared$notes, collapse = " "), "Constant predictors")
 
-  raw$x[[2L]] <- Inf
+  complete_raw$x[[2L]] <- Inf
   expect_error(
-    SOMevidence:::.prepare_gui_analysis(config, raw),
+    SOMevidence:::.prepare_gui_analysis(config, complete_raw),
     "infinite"
   )
 })
 
-test_that("GUI preflight distinguishes planned and structurally feasible fits", {
+test_that("GUI preflight distinguishes planned and eligible fits", {
   raw <- data.frame(
     sample_id = sprintf("s%02d", 1:12),
     domain = c(rep("a", 2), rep("b", 4), rep("c", 6)),
@@ -321,7 +329,7 @@ test_that("GUI preflight distinguishes planned and structurally feasible fits", 
     ok = TRUE, prepared = prepared
   ))
   expect_match(ready_status, "Preflight ready with review items")
-  expect_match(ready_status, "2 structurally feasible")
+  expect_match(ready_status, "2 eligible")
   expect_match(ready_status, "3/3 splits")
 
   blocked_config <- config
@@ -334,7 +342,7 @@ test_that("GUI preflight distinguishes planned and structurally feasible fits", 
   expect_match(blocked$error, "No planned SOM fit")
   blocked_status <- SOMevidence:::.format_gui_preflight_status(blocked)
   expect_match(blocked_status, "Preflight not ready")
-  expect_match(blocked_status, "0 structurally feasible")
+  expect_match(blocked_status, "0 eligible")
 })
 
 test_that("GUI preflight identifies repeated analysis sets", {
@@ -373,6 +381,48 @@ test_that("GUI preflight identifies repeated analysis sets", {
   expect_identical(prepared$duplicate_analysis_splits, 2L)
   expect_identical(prepared$cross_model_feasible_splits, NA_integer_)
   expect_match(paste(prepared$notes, collapse = " "), "repeat")
+  blocked <- SOMevidence:::.gui_preflight_result(config, raw)
+  expect_false(blocked$ok)
+  expect_match(blocked$error, "overweight the same data perturbation")
+})
+
+test_that("GUI preflight blocks missing predictors before SOM fitting", {
+  raw <- data.frame(
+    sample_id = paste0("s", 1:6),
+    x1 = 1:6,
+    x2 = c(2, 3, NA, 5, 6, 7)
+  )
+  config <- list(
+    predictors = c("x1", "x2"),
+    id_column = "sample_id",
+    group_column = NULL,
+    time_column = NULL,
+    domain_column = NULL,
+    weight_column = NULL,
+    external_column = NULL,
+    transform = "identity",
+    center = TRUE,
+    scale = TRUE,
+    zero_replacement = NULL,
+    resample_method = "full",
+    repeats = 1L,
+    prop = 1,
+    resample_seed = 1L,
+    xdim = 2L,
+    ydim = 2L,
+    seeds = 1L,
+    rlen = 10L,
+    k = 2L,
+    cross_models = character()
+  )
+
+  result <- SOMevidence:::.gui_preflight_result(config, raw)
+  expect_false(result$ok)
+  expect_match(result$error, "must be complete")
+  expect_match(
+    SOMevidence:::.format_gui_preflight_status(result),
+    "Preflight not ready"
+  )
 })
 
 test_that("GUI preflight validates transforms without cross-models", {
@@ -463,7 +513,7 @@ test_that("GUI preflight blocks workflows above the pairwise budget", {
 test_that("GUI preflight reports cross-model split prerequisites as review", {
   raw <- data.frame(
     sample_id = sprintf("s%02d", 1:12),
-    domain = rep(c("a", "b", "c"), each = 4),
+    domain = c(rep("a", 2), rep("b", 4), rep("c", 6)),
     x = seq_len(12),
     y = seq_len(12) / 10
   )
@@ -483,17 +533,15 @@ test_that("GUI preflight reports cross-model split prerequisites as review", {
     repeats = 2L,
     prop = 0.8,
     resample_seed = 1L,
-    xdim = 2L,
-    ydim = 2L,
+    xdim = 3L,
+    ydim = 3L,
     seeds = 1L,
     rlen = 10L,
-    k = 2:3,
+    k = 2:8,
     cross_models = c("kmeans", "ward")
   )
 
-  partial <- raw
-  partial$x[[1L]] <- NA_real_
-  partial_preflight <- SOMevidence:::.gui_preflight_result(config, partial)
+  partial_preflight <- SOMevidence:::.gui_preflight_result(config, raw)
   expect_true(partial_preflight$ok)
   expect_identical(
     partial_preflight$prepared$cross_model_feasible_splits,
@@ -509,26 +557,91 @@ test_that("GUI preflight reports cross-model split prerequisites as review", {
   expect_match(partial_status, "Preflight ready with review items")
   expect_match(partial_status, "Cross-model prerequisites: 1/3")
 
-  none <- raw
-  none$x[c(1L, 5L, 9L)] <- NA_real_
-  none_preflight <- SOMevidence:::.gui_preflight_result(config, none)
-  expect_true(none_preflight$ok)
+  none_config <- config
+  none_config$xdim <- 5L
+  none_config$ydim <- 2L
+  none_config$k <- 2:10
+  none_preflight <- SOMevidence:::.gui_preflight_result(none_config, raw)
+  expect_false(none_preflight$ok)
   expect_identical(none_preflight$prepared$cross_model_feasible_splits, 0L)
+  expect_match(none_preflight$error, "None of the requested cross-model")
   expect_match(
     paste(none_preflight$prepared$notes, collapse = " "),
     "0 of 3 resampling splits"
   )
 })
 
-test_that("GUI cross-model preflight uses split-specific preprocessing", {
+test_that("GUI preflight checks preprocessing within every analysis split", {
   raw <- data.frame(
     sample_id = sprintf("s%02d", 1:12),
     domain = rep(c("a", "b", "c"), each = 4),
-    constant_with_missing = c(NA_real_, rep(1, 11)),
+    x = c(rep(1, 8), 2:5)
+  )
+  config <- list(
+    predictors = "x",
+    id_column = "sample_id",
+    group_column = NULL,
+    time_column = NULL,
+    domain_column = "domain",
+    weight_column = NULL,
+    external_column = NULL,
+    transform = "identity",
+    center = TRUE,
+    scale = TRUE,
+    zero_replacement = NULL,
+    resample_method = "leave_domain_out",
+    repeats = 2L,
+    prop = 0.8,
+    resample_seed = 1L,
+    xdim = 2L,
+    ydim = 2L,
+    seeds = 1L,
+    rlen = 10L,
+    k = 2L,
+    cross_models = character()
+  )
+
+  preflight <- SOMevidence:::.gui_preflight_result(config, raw)
+  expect_true(preflight$ok)
+  expect_identical(preflight$prepared$preprocessing_feasible_splits, 2L)
+  expect_equal(nrow(preflight$prepared$preprocessing_failures), 1L)
+  expect_identical(preflight$prepared$feasible_som_fits, 2L)
+  expect_identical(preflight$prepared$infeasible_som_fits, 1L)
+  expect_identical(
+    preflight$prepared$structurally_ineligible_som_fits,
+    0L
+  )
+  expect_identical(
+    preflight$prepared$preprocessing_ineligible_som_fits,
+    1L
+  )
+  expect_match(
+    paste(preflight$prepared$notes, collapse = " "),
+    "split-specific preprocessing"
+  )
+  expect_no_match(
+    paste(preflight$prepared$notes, collapse = " "),
+    "map units"
+  )
+
+  all_constant <- raw
+  all_constant$x <- 1
+  blocked <- SOMevidence:::.gui_preflight_result(config, all_constant)
+  expect_false(blocked$ok)
+  expect_identical(blocked$prepared$preprocessing_feasible_splits, 0L)
+  expect_identical(blocked$prepared$feasible_som_fits, 0L)
+  expect_match(blocked$error, "No planned SOM fit")
+})
+
+test_that("GUI cross-model preflight handles split-specific constants", {
+  raw <- data.frame(
+    sample_id = sprintf("s%02d", 1:12),
+    domain = rep(c("a", "b", "c"), each = 4),
+    constant_predictor = rep(1, 12),
     gradient = seq_len(12)
   )
   config <- list(
-    predictors = c("constant_with_missing", "gradient"),
+    predictors = c("constant_predictor", "gradient"),
     id_column = "sample_id",
     group_column = NULL,
     time_column = NULL,
@@ -684,7 +797,7 @@ test_that("GUI server runs a compact built-in reproducible workflow", {
     expect_match(output$status, "SOM fits")
     expect_match(output$preflight_status, "Preflight ready")
     expect_match(output$preflight_status, "planned fits")
-    expect_match(output$preflight_status, "structurally feasible")
+    expect_match(output$preflight_status, "eligible")
     expect_match(output$diagnostics_table, "Failures")
 
     session$setInputs(consensus_k = "k3")

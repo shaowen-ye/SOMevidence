@@ -310,6 +310,7 @@ partition_som <- function(
           stringsAsFactors = FALSE
         ),
         method = method,
+        partition_method = method,
         scope = scope,
         ensemble = ensemble
       ),
@@ -466,7 +467,7 @@ partition_som <- function(
   structure(
     list(
       records = records, pairwise = pairwise_table, stability = stability,
-      method = method, scope = scope,
+      method = method, partition_method = method, scope = scope,
       max_pairwise_comparisons = as.integer(max_pairwise_comparisons),
       ensemble = ensemble
     ),

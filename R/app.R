@@ -121,7 +121,7 @@
     character()
   }
   predictor_status <- if (length(predictors)) "Ready" else "Select predictors"
-  missing_status <- if (incomplete_rows) "Review" else "Ready"
+  missing_status <- if (incomplete_rows) "Not ready" else "Ready"
   finite_status <- if (non_finite) "Resolve" else "Ready"
   empty_status <- if (empty_rows) "Resolve" else "Ready"
   constant_status <- if (length(constant)) "Review" else "Ready"
@@ -179,6 +179,13 @@
   }
   if (any(rowSums(!is.na(predictor_matrix)) == 0L)) {
     .abort("Every row must contain at least one observed predictor value.")
+  }
+  if (anyNA(predictor_matrix)) {
+    .abort(paste0(
+      "Predictors selected in the experimental GUI must be complete. ",
+      "Handle missingness in a controlled analysis or use the R API with ",
+      "an explicitly justified `max_na_fraction`."
+    ))
   }
 
   metadata_columns <- .gui_metadata_columns(config)
@@ -262,7 +269,13 @@
   if (config$resample_method == "leave_domain_out") {
     resample_arguments$domain <- "domain"
   }
-  resamples <- do.call(som_resamples, resample_arguments)
+  resample_capture <- .capture_warnings(
+    do.call(som_resamples, resample_arguments)
+  )
+  if (inherits(resample_capture$value, "error")) {
+    stop(resample_capture$value)
+  }
+  resamples <- resample_capture$value
   specification <- som_spec(
     c(config$xdim, config$ydim),
     seeds = config$seeds,
@@ -273,14 +286,65 @@
   split_analysis_n <- vapply(
     resamples$splits, function(split) length(split$analysis), integer(1)
   )
+  preprocessing_by_layer <- .normalise_preprocess(
+    preprocessing, names(data$layers)
+  )
+  split_preprocessing_checks <- lapply(resamples$splits, function(split) {
+    tryCatch(
+      {
+        training_layers <- Map(
+          function(layer, layer_preprocess) {
+            .fit_preprocessor(
+              layer[split$analysis, , drop = FALSE], layer_preprocess
+            )$data
+          },
+          data$layers,
+          preprocessing_by_layer
+        )
+        if (any(vapply(training_layers, function(layer) {
+          any(rowMeans(is.na(layer)) > specification$max_na_fraction)
+        }, logical(1)))) {
+          .abort("At least one training row exceeds `max_na_fraction`.")
+        }
+        .resolve_layer_weights(
+          training_layers,
+          specification$layer_weights,
+          specification$normalize_layers
+        )
+        list(ok = TRUE, error = NA_character_)
+      },
+      error = function(e) list(ok = FALSE, error = conditionMessage(e))
+    )
+  })
+  split_preprocessing_feasible <- vapply(
+    split_preprocessing_checks, `[[`, logical(1), "ok"
+  )
+  preprocessing_failures <- data.frame(
+    split_id = vapply(resamples$splits, `[[`, character(1), "id")[
+      !split_preprocessing_feasible
+    ],
+    error = vapply(
+      split_preprocessing_checks, `[[`, character(1), "error"
+    )[!split_preprocessing_feasible],
+    stringsAsFactors = FALSE
+  )
   grid_units <- specification$grids$xdim * specification$grids$ydim
-  split_grid_feasible <- outer(split_analysis_n, grid_units, `>=`)
+  split_grid_structural <- outer(split_analysis_n, grid_units, `>=`)
+  split_grid_feasible <- split_grid_structural &
+    split_preprocessing_feasible
   feasible_som_fits <- as.integer(
     sum(split_grid_feasible) * length(specification$seeds)
   )
   model_budget <- length(resamples$splits) *
     nrow(expand_som_spec(specification))
   infeasible_som_fits <- as.integer(model_budget - feasible_som_fits)
+  structural_ineligible_fits <- as.integer(
+    sum(!split_grid_structural) * length(specification$seeds)
+  )
+  preprocess_ineligible_fits <- as.integer(
+    sum(split_grid_structural & !split_preprocessing_feasible) *
+      length(specification$seeds)
+  )
   max_pairwise_comparisons <- .gui_integer(
     config$max_pairwise_comparisons %||% 1000000L,
     "max_pairwise_comparisons"
@@ -317,8 +381,22 @@
     )))
   }
 
-  notes <- character()
-  if (infeasible_som_fits > 0L && feasible_som_fits > 0L) {
+  notes <- resample_capture$warnings$warning
+  if (nrow(preprocessing_failures)) {
+    notes <- c(
+      notes,
+      sprintf(
+        paste0(
+          "%d of %d resampling splits fail split-specific preprocessing or ",
+          "layer-weight prerequisites. First reason: %s"
+        ),
+        nrow(preprocessing_failures),
+        length(resamples$splits),
+        preprocessing_failures$error[[1L]]
+      )
+    )
+  }
+  if (structural_ineligible_fits > 0L && feasible_som_fits > 0L) {
     notes <- c(
       notes,
       sprintf(
@@ -326,7 +404,7 @@
           "%d of %d planned SOM fits do not meet the structural prerequisite ",
           "that analysis rows must be at least the number of map units."
         ),
-        infeasible_som_fits, model_budget
+        structural_ineligible_fits, model_budget
       )
     )
   }
@@ -390,6 +468,12 @@
     pairwise_budget_ok = pairwise_budget_ok,
     feasible_som_fits = feasible_som_fits,
     infeasible_som_fits = infeasible_som_fits,
+    structurally_ineligible_som_fits = structural_ineligible_fits,
+    preprocessing_ineligible_som_fits = preprocess_ineligible_fits,
+    preprocessing_feasible_splits = as.integer(sum(
+      split_preprocessing_feasible
+    )),
+    preprocessing_failures = preprocessing_failures,
     duplicate_analysis_splits = duplicate_analysis_splits,
     cross_model_feasible_splits = cross_model_feasible_splits,
     notes = unique(notes)
@@ -405,9 +489,9 @@
           ok = FALSE,
           prepared = prepared,
           error = paste0(
-            "No planned SOM fit meets the structural prerequisite that the ",
-            "analysis split contain at least as many rows as map units. ",
-            "Use a smaller grid or a design with more analysis rows."
+            "No planned SOM fit meets all preprocessing, layer-weight and ",
+            "sample-size prerequisites. Review the split diagnostics, use a ",
+            "smaller grid or revise the analysis design."
           )
         ))
       }
@@ -421,6 +505,30 @@
             " pairwise partition comparisons, exceeding the limit of ",
             format(prepared$max_pairwise_comparisons, trim = TRUE),
             ". Reduce seeds, grids, resampling splits or candidate k values."
+          )
+        ))
+      }
+      if (prepared$duplicate_analysis_splits > 0L) {
+        return(list(
+          ok = FALSE,
+          prepared = prepared,
+          error = paste0(
+            prepared$duplicate_analysis_splits,
+            " resampling split(s) repeat earlier analysis rows and would ",
+            "overweight the same data perturbation. Reduce the number of ",
+            "repeats or revise the resampling design."
+          )
+        ))
+      }
+      if (!is.na(prepared$cross_model_feasible_splits) &&
+            prepared$cross_model_feasible_splits == 0L) {
+        return(list(
+          ok = FALSE,
+          prepared = prepared,
+          error = paste0(
+            "None of the requested cross-model reference fits meets the ",
+            "split-specific preprocessing and sample-size prerequisites. ",
+            "Revise the predictors, candidate k values or resampling design."
           )
         ))
       }
@@ -439,8 +547,8 @@
         lines,
         sprintf(
           paste0(
-            "SOM structure: %d planned fits; %d structurally feasible; ",
-            "%d structurally ineligible."
+            "SOM eligibility: %d planned fits; %d eligible; ",
+            "%d ineligible."
           ),
           prepared$model_budget,
           prepared$feasible_som_fits,
@@ -471,8 +579,8 @@
     ),
     sprintf(
       paste0(
-        "SOM structure: %d planned fits; %d structurally feasible; ",
-        "%d structurally ineligible."
+        "SOM eligibility: %d planned fits; %d eligible; ",
+        "%d ineligible."
       ),
       prepared$model_budget,
       prepared$feasible_som_fits,

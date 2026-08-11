@@ -12,7 +12,9 @@
 #' @param splits For `method = "custom"`, a list containing `analysis` and
 #'   optional `assessment` row indices.
 #'
-#' @return A `som_resamples` object.
+#' @return A `som_resamples` object. The object records the number of distinct
+#'   analysis sets in `n_unique_analysis_splits` and identifies repeated sets
+#'   in `duplicate_analysis_splits`.
 #' @examples
 #' x <- matrix(seq_len(120), nrow = 30)
 #' data <- som_data(x, group = rep(paste0("site_", 1:10), each = 3))
@@ -118,6 +120,33 @@ som_resamples <- function(data,
   if (anyDuplicated(split_ids)) {
     .abort("Every resampling split must have a unique `id`.")
   }
+  analysis_keys <- vapply(out, function(split) {
+    paste(sort(unique(split$analysis)), collapse = ",")
+  }, character(1))
+  first_occurrence <- match(analysis_keys, analysis_keys)
+  duplicate_index <- which(duplicated(analysis_keys))
+  duplicate_analysis_splits <- if (length(duplicate_index)) {
+    data.frame(
+      split_id = split_ids[duplicate_index],
+      duplicates_split_id = split_ids[first_occurrence[duplicate_index]],
+      stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      split_id = character(),
+      duplicates_split_id = character(),
+      stringsAsFactors = FALSE
+    )
+  }
+  n_unique_analysis_splits <- length(unique(analysis_keys))
+  if (nrow(duplicate_analysis_splits)) {
+    warning(paste0(
+      nrow(duplicate_analysis_splits), " of ", length(out),
+      " resampling splits repeat an earlier analysis set and do not add a ",
+      "distinct training-data perturbation. They are retained because their ",
+      "assessment sets may differ; review the requested design."
+    ), call. = FALSE)
+  }
 
   structure(
     list(
@@ -125,7 +154,9 @@ som_resamples <- function(data,
       splits = out,
       seed = as.integer(seed),
       n = n,
-      sample_ids = as.character(data$metadata$id)
+      sample_ids = as.character(data$metadata$id),
+      n_unique_analysis_splits = as.integer(n_unique_analysis_splits),
+      duplicate_analysis_splits = duplicate_analysis_splits
     ),
     class = "som_resamples"
   )
@@ -138,6 +169,8 @@ print.som_resamples <- function(x, ...) {
   cat("<som_resamples>\n")
   cat("  method    :", x$method, "\n")
   cat("  splits    :", length(x$splits), "\n")
+  cat("  unique analysis sets:",
+      x$n_unique_analysis_splits %||% length(x$splits), "\n")
   cat("  analysis  :", paste(range(analysis_n), collapse = "-"), "rows\n")
   cat("  assessment:", paste(range(assessment_n), collapse = "-"), "rows\n")
   invisible(x)

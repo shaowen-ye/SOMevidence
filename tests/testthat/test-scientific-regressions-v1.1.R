@@ -300,6 +300,7 @@ test_that("consensus collapse and incomplete evidence cannot pass gates", {
   partitions <- structure(
     list(
       records = records, stability = stability, scope = "analysis",
+      partition_method = "ward.D2",
       ensemble = ensemble
     ),
     class = "som_partitions"
@@ -340,6 +341,8 @@ test_that("consensus collapse and incomplete evidence cannot pass gates", {
       partition_completeness = data.frame(
         k = 2L, n_partitions = 2L, n_complete_partitions = 1L
       ),
+      partition_records = partitions$records,
+      partition_method = partitions$partition_method,
       scope = "analysis",
       ensemble = ensemble
     ),

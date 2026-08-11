@@ -100,8 +100,14 @@ print.som_gate <- function(x, ...) {
 #' not demonstrate that discrete ecological types exist, identify a causal
 #' mechanism, or establish ecological truth.
 #'
+#' A representation audit alone cannot support a hard partition. A supported
+#' decision also requires traceable comparative partition evidence and at
+#' least one prespecified partition-quality requirement. Missing evidence or a
+#' representation-only gate produces an `"uncertain"` result.
+#'
 #' @param audit A `som_audit` object.
-#' @param partitions Optional `som_partitions` object.
+#' @param partitions Optional `som_partitions` object. At least one partition-
+#'   derived evidence object is required for a `"supported"` decision.
 #' @param k Candidate number of clusters when partition stability is assessed.
 #' @param gate Optional analyst-defined `som_gate`. Without one the status is
 #'   `"not_assessed"`.
@@ -150,6 +156,88 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
   if (!is.null(cross_model) &&
         !identical(audit$ensemble, cross_model$ensemble)) {
     .abort("All defensibility evidence must share the same source ensemble.")
+  }
+  has_partition_evidence <- !is.null(partitions) || !is.null(consensus) ||
+    !is.null(cross_model)
+  if (has_partition_evidence && is.null(k)) {
+    .abort("Supply `k` when candidate-partition evidence is included.")
+  }
+  source_partition_method <- if (!is.null(partitions)) {
+    partitions$partition_method %||% partitions$method
+  } else {
+    NULL
+  }
+  missing_partition_provenance <-
+    (!is.null(partitions) &&
+     (is.null(partitions$records) || is.null(source_partition_method))) ||
+    (!is.null(consensus) &&
+     (is.null(consensus$records) || is.null(consensus$partition_method))) ||
+    (!is.null(cross_model) &&
+     (is.null(cross_model$partition_records) ||
+      is.null(cross_model$partition_method)))
+  if (missing_partition_provenance) {
+    .abort(paste0(
+      "Defensibility evidence must retain source-partition provenance. ",
+      "Recompute the evidence object with this package version."
+    ))
+  }
+
+  partition_sources <- Filter(Negate(is.null), list(
+    partitions = if (!is.null(partitions)) partitions$records else NULL,
+    consensus = if (!is.null(consensus)) consensus$records else NULL,
+    cross_model = if (!is.null(cross_model)) {
+      cross_model$partition_records
+    } else {
+      NULL
+    }
+  ))
+  partition_methods <- Filter(Negate(is.null), list(
+    partitions = source_partition_method,
+    consensus = if (!is.null(consensus)) {
+      consensus$partition_method
+    } else {
+      NULL
+    },
+    cross_model = if (!is.null(cross_model)) {
+      cross_model$partition_method
+    } else {
+      NULL
+    }
+  ))
+  n_partition_source_objects <- sum(c(
+    !is.null(partitions), !is.null(consensus), !is.null(cross_model)
+  ))
+  incomplete_partition_sources <-
+    length(partition_sources) < n_partition_source_objects ||
+    length(partition_methods) < n_partition_source_objects
+  if (n_partition_source_objects > 1L && incomplete_partition_sources) {
+    .abort(paste0(
+      "Combined defensibility evidence must retain source-partition ",
+      "provenance. Recompute the evidence objects with this package version."
+    ))
+  }
+  if (length(partition_sources) > 1L) {
+    partition_sources <- lapply(partition_sources, function(records) {
+      Filter(function(record) identical(as.integer(record$k), k), records)
+    })
+    same_records <- vapply(
+      partition_sources[-1L],
+      identical,
+      logical(1),
+      partition_sources[[1L]]
+    )
+    same_method <- vapply(
+      partition_methods[-1L],
+      identical,
+      logical(1),
+      partition_methods[[1L]]
+    )
+    if (!all(same_records) || !all(same_method)) {
+      .abort(paste0(
+        "`partitions`, `consensus` and `cross_model` must derive from the ",
+        "same candidate partitions for the requested `k`."
+      ))
+    }
   }
 
   median_ari <- NA_real_
@@ -241,7 +329,6 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
   cross_model_median_ari <- cross_model_pooled_median_ari <-
     cross_model_methods <- cross_model_min_success_rate <- NA_real_
   if (!is.null(cross_model)) {
-    if (is.null(k)) .abort("Supply `k` when cross-model evidence is included.")
     cross_rows <- cross_model$comparisons[
       cross_model$comparisons$k == k, ,
       drop = FALSE
@@ -287,6 +374,29 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
       }
     }
   }
+  partition_quality_rules <- c(
+    "min_median_ari", "min_median_ami", "min_cluster_jaccard",
+    "min_membership_support", "max_assignment_entropy",
+    "min_cross_model_ari"
+  )
+  active_partition_quality_rules <- if (is.null(gate)) {
+    character()
+  } else {
+    intersect(
+      names(gate)[!vapply(gate, is.null, logical(1))],
+      partition_quality_rules
+    )
+  }
+  partition_comparison_available <-
+    any(is.finite(c(median_ari, median_ami, min_cluster_jaccard))) ||
+    (
+      is.finite(replicated_assignment_coverage) &&
+      replicated_assignment_coverage > 0 &&
+      any(is.finite(c(
+        median_membership_support, median_assignment_entropy
+      )))
+    ) ||
+    is.finite(cross_model_median_ari)
   evidence <- c(
     median_topographic_error = stats::median(
       audit$fit_metrics$topographic_error,
@@ -310,6 +420,10 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
     cross_model_pooled_median_ari = cross_model_pooled_median_ari,
     cross_model_methods = cross_model_methods,
     cross_model_min_success_rate = cross_model_min_success_rate,
+    comparative_partition_evidence_available =
+      as.numeric(partition_comparison_available),
+    partition_quality_requirements =
+      length(active_partition_quality_rules),
     success_rate = audit$success_rate
   )
 
@@ -355,9 +469,18 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
         passed = passed, stringsAsFactors = FALSE
       )
     }))
-    has_partition_evidence <- !is.null(partitions) || !is.null(consensus) ||
-      !is.null(cross_model)
-    if (has_partition_evidence) {
+    if (!has_partition_evidence) {
+      checks <- rbind(
+        data.frame(
+          requirement = "candidate_partition_evidence_available",
+          observed = NA_real_,
+          threshold = 1,
+          passed = NA,
+          stringsAsFactors = FALSE
+        ),
+        checks
+      )
+    } else {
       checks <- rbind(
         data.frame(
           requirement = "all_partitions_observe_k",
@@ -373,6 +496,23 @@ assess_defensibility <- function(audit, partitions = NULL, k = NULL, gate = NULL
         checks
       )
     }
+    checks <- rbind(
+      data.frame(
+        requirement = "comparative_partition_evidence_available",
+        observed = as.numeric(partition_comparison_available),
+        threshold = 1,
+        passed = if (partition_comparison_available) TRUE else NA,
+        stringsAsFactors = FALSE
+      ),
+      data.frame(
+        requirement = "partition_quality_requirement_specified",
+        observed = length(active_partition_quality_rules),
+        threshold = 1,
+        passed = if (length(active_partition_quality_rules)) TRUE else NA,
+        stringsAsFactors = FALSE
+      ),
+      checks
+    )
     if (!is.null(consensus)) {
       checks <- rbind(
         data.frame(

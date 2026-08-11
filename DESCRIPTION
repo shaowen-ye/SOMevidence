@@ -1,13 +1,13 @@
 Package: SOMevidence
 Title: Evidence Workflows for Self-Organizing Map Classification
-Version: 1.1.1
+Version: 1.1.2
 Authors@R: person("Shaowen", "Ye", role = c("aut", "cre"),
                   email = "yeshaowen2119@gmail.com")
 Description: Provides explicit data-design objects, leakage-safe preprocessing,
     design-aware resampling, reproducible ensembles of self-organizing maps,
     and evidence-oriented diagnostics for ecological, environmental and
-    evolutionary applications. The package separates the reproducibility of a
-    continuous representation from the defensibility of a hard partition and
+    evolutionary applications. The package separates continuous-representation
+    diagnostics from the defensibility of a hard partition and
     supports explicit abstention when evidence is insufficient. Self-organizing
     maps follow Kohonen (1982) <doi:10.1007/BF00337288>, using the 'kohonen'
     implementation described by Wehrens and Kruisselbrink (2018)
@@ -29,5 +29,5 @@ Config/Needs/documentation: roxygen2
 Config/Needs/lint: lintr
 Config/Needs/validation: jsonlite, pkgload, renv
 Config/Needs/website: pkgdown
-VignetteBuilder: knitr
+VignetteBuilder: knitr, rmarkdown
 Config/roxygen2/version: 8.1.0

@@ -16,7 +16,8 @@ assess_defensibility(
 \arguments{
 \item{audit}{A \code{som_audit} object.}
 
-\item{partitions}{Optional \code{som_partitions} object.}
+\item{partitions}{Optional \code{som_partitions} object. At least one partition-
+derived evidence object is required for a \code{"supported"} decision.}
 
 \item{k}{Candidate number of clusters when partition stability is assessed.}
 
@@ -42,4 +43,9 @@ requirements and structural completeness checks were met for the stated
 data, analysis design, preprocessing, model budget and candidate \code{k}. It does
 not demonstrate that discrete ecological types exist, identify a causal
 mechanism, or establish ecological truth.
+
+A representation audit alone cannot support a hard partition. A supported
+decision also requires traceable comparative partition evidence and at
+least one prespecified partition-quality requirement. Missing evidence or a
+representation-only gate produces an \code{"uncertain"} result.
 }

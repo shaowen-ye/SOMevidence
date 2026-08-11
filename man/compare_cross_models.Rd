@@ -22,8 +22,9 @@ a separate mapping-transfer diagnostic.}
 }
 \value{
 A \code{som_cross_comparison} containing ARI and AMI effect sizes,
-summaries, reference-fit success rates and source-partition completeness.
-Neither agreement metric is reported as accuracy.
+summaries, reference-fit success rates, source-partition completeness and
+source-partition provenance. Neither agreement metric is reported as
+accuracy.
 }
 \description{
 Compare SOM partitions with controlled cross-model references
