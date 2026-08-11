@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -158,7 +158,9 @@ lists. Compact sensitivity results retain model-stage failures and
 warnings, and new-data mapping objects retain structured warnings.</p>
 <p>These are software and evidential safeguards. They do not turn
 internal validity, cross-model agreement, or transfer diagnostics into
-ecological truth.</p>
+ecological truth. The repository’s <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/VALIDATION_SCOPE.md" class="external-link">validation-scope
+statement</a> separates software verification, design-conditioned
+reproducibility, worked examples, and future external validation.</p>
 </div>
 <div class="section level2">
 <h2 id="stable-and-experimental-interfaces">Stable and experimental interfaces<a class="anchor" aria-label="anchor" href="#stable-and-experimental-interfaces"></a>
@@ -186,10 +188,14 @@ record every consequential setting directly.</p>
 <p><code><a href="../reference/launch_som_app.html">launch_som_app()</a></code> returns a <code>shiny.appobj</code>. It
 can be printed in an interactive session or passed to
 <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code>, but it does not return an analysis result.
-The exported R script, not the interactive session, is the executable
-analysis record. The sensitivity and simulation interfaces also remain
-experimental because their scenario descriptions may evolve after
-broader use.</p>
+<code>SOMevidence</code> adds no telemetry. In a local session, a
+selected file remains on the local computer; in a remotely deployed app,
+Shiny transfers it to that host. Its YAML export is a configuration
+snapshot. The exported R script can be rerun, but it becomes part of a
+reproducible record only when retained with the exact input, software
+versions, warnings, failures, and results. The sensitivity and
+simulation interfaces also remain experimental because their scenario
+descriptions may evolve after broader use.</p>
 </div>
 <div class="section level2">
 <h2 id="object-boundaries-are-scientific-boundaries">Object boundaries are scientific boundaries<a class="anchor" aria-label="anchor" href="#object-boundaries-are-scientific-boundaries"></a>
@@ -216,7 +222,15 @@ conditional decision.</li>
 <p>No object is a certificate of ecological truth. Cross-model agreement
 is not a leaderboard, external-label agreement is not classification
 accuracy, missing evidence remains visible, and insufficient evidence
-may lead to abstention.</p>
+may lead to abstention. A <code>supported</code> decision means only
+that the stated analyst-specified evidence requirements and structural
+checks passed for that workflow. It does not prove that discrete
+ecological types exist.</p>
+<p>A continuous gradient illustrates the boundary: imposing a fixed
+<code>k</code> can yield similar partitions across resamples, starts, or
+algorithms even though the underlying structure contains no discrete
+classes. Stability and cross-model agreement therefore remain
+conditional evidence, not a test of discreteness.</p>
 </div>
 <div class="section level2">
 <h2 id="reporting-an-analysis">Reporting an analysis<a class="anchor" aria-label="anchor" href="#reporting-an-analysis"></a>
@@ -225,7 +239,7 @@ may lead to abstention.</p>
 sampling design, and gate settings with every analysis:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageVersion</a></span><span class="op">(</span><span class="st">"SOMevidence"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] '1.1.0'</span></span>
+<span><span class="co">#&gt; [1] '1.1.1'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>

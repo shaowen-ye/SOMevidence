@@ -17,11 +17,13 @@ open_data_registry(role = NULL, domain = NULL)
 
 - role:
 
-  Optional role used to filter the registry.
+  Optional role used to filter the registry. Matching is exact and
+  case-sensitive; unmatched values return no matching rows.
 
 - domain:
 
-  Optional scientific domain used to filter the registry.
+  Optional scientific domain used to filter the registry. Matching is
+  exact and case-sensitive; unmatched values return no matching rows.
 
 ## Value
 

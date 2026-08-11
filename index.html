@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,8 +51,8 @@
 <div class="page-header"><h1 id="somevidence">SOMevidence<a class="anchor" aria-label="anchor" href="#somevidence"></a>
 </h1></div>
 <p><a href="https://shaowen-ye.r-universe.dev/SOMevidence" class="external-link"><img src="https://shaowen-ye.r-universe.dev/badges/SOMevidence" alt="R-universe version"></a> <a href="https://github.com/shaowen-ye/SOMevidence/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/shaowen-ye/SOMevidence/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://github.com/shaowen-ye/SOMevidence/actions/workflows/test-coverage.yaml" class="external-link"><img src="https://github.com/shaowen-ye/SOMevidence/actions/workflows/test-coverage.yaml/badge.svg" alt="Test coverage"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg" alt="License: GPL-3.0-or-later"></a></p>
-<p><code>SOMevidence</code> is an R package for asking when classifications derived from self-organizing maps (SOMs) are reproducible and scientifically defensible. It is intended for ecological, environmental, and evolutionary data in which sampling groups, monitoring domains, repeated observations, multiple data layers, and incomplete transferability are common.</p>
-<p>The package uses <a href="https://cran.r-project.org/package=kohonen" class="external-link"><code>kohonen</code></a> as its SOM training backend. Its contribution is an evidence workflow around SOM training: explicit data design, leakage-safe preprocessing, controlled ensembles, partition stability, cross-model agreement, transfer diagnostics, and conditional decisions that can abstain when evidence is insufficient.</p>
+<p><code>SOMevidence</code> is an R package for auditing whether classifications derived from self-organizing maps (SOMs) meet prespecified evidence requirements under an explicit analysis design. It is intended for ecological, environmental, and evolutionary data in which sampling groups, monitoring domains, repeated observations, multiple data layers, and incomplete transferability are common.</p>
+<p>The package uses <a href="https://cran.r-project.org/package=kohonen" class="external-link"><code>kohonen</code></a> as its SOM training backend. Its contribution is an evidence workflow around SOM training: explicit data design, leakage-safe preprocessing, controlled ensembles, partition stability, cross-model agreement, transfer diagnostics, and conditional decisions that can abstain when evidence is insufficient. The <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/VALIDATION_SCOPE.md" class="external-link">validation scope</a> distinguishes software checks, design-conditioned reproducibility, worked examples, and external validation.</p>
 <div class="section level2">
 <h2 id="what-the-package-separates">What the package separates<a class="anchor" aria-label="anchor" href="#what-the-package-separates"></a>
 </h2>
@@ -75,9 +75,90 @@
 <li>quantization, topology, occupancy, consensus, entropy, Jaccard, ARI, and AMI diagnostics;</li>
 <li>controlled triangulation with K-means, Ward.D2, and, when requested, Gaussian mixture models;</li>
 <li>held-domain and later-batch mapping without refitting preprocessing on the assessment data;</li>
-<li>explicit defensibility gates with an <code>"abstain"</code> outcome; and</li>
+<li>explicit analyst-specified evidence gates with an <code>"abstain"</code> outcome; and</li>
 <li>analytical graphics plus an optional Shiny interface that exports R code and configuration.</li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="metrics-dictionary">Metrics dictionary<a class="anchor" aria-label="anchor" href="#metrics-dictionary"></a>
+</h2>
+<p>Directions below are diagnostic tendencies within otherwise comparable data, preprocessing, scopes, and model budgets. They are not universal thresholds and should not be combined into an automatic leaderboard.</p>
+<table class="table">
+<colgroup>
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+</colgroup>
+<thead><tr>
+<th>Question</th>
+<th>Metrics</th>
+<th>Diagnostic direction</th>
+<th>Required evidence</th>
+<th>Does not establish</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>How well does a fitted map represent its analysis data?</td>
+<td>Quantization error, topographic error, empty-unit rate</td>
+<td>Generally lower within comparable fits; inspect trade-offs</td>
+<td>Successful fits using the same variables, preprocessing, scope, and comparable grids</td>
+<td>A best map, a true number of classes, or ecological validity</td>
+</tr>
+<tr>
+<td>Is a fixed-<code>k</code> partition reproducible across the planned ensemble?</td>
+<td>Pairwise ARI/AMI, clusterwise Jaccard, joint coverage, complete-partition rate</td>
+<td>Agreement and coverage higher; every source partition retains <code>k</code>
+</td>
+<td>At least two successful, comparable partitions with adequate shared observations</td>
+<td>That discrete types exist, that <code>k</code> is optimal, or that labels are correct</td>
+</tr>
+<tr>
+<td>How consistently is each sample assigned?</td>
+<td>Membership support, assignment entropy, assignment, consensus-label, and replicated coverage</td>
+<td>Support and coverage higher; entropy lower</td>
+<td>An identifiable consensus with repeated assignments and explicit coverage</td>
+<td>A posterior probability or probability that an assignment is correct</td>
+</tr>
+<tr>
+<td>Do controlled reference algorithms agree with the SOM partition?</td>
+<td>Method-specific SOM-to-reference ARI, method count, reference-fit success</td>
+<td>Agreement higher, with all requested methods evaluable</td>
+<td>Prespecified reference methods fitted on common splits and preprocessing</td>
+<td>Accuracy, independence of evidence, or ecological validation</td>
+</tr>
+<tr>
+<td>Does the representation map comparably to a held-out domain?</td>
+<td>Assessment-to-analysis distance ratio, unoccupied-unit rate, mapping coverage</td>
+<td>Ratio nearer 1, unoccupied rate lower, coverage higher; inspect all fits</td>
+<td>Genuine held-domain rows mapped using training-derived preprocessing</td>
+<td>Predictive accuracy, causal explanation of shift, or general transferability</td>
+</tr>
+<tr>
+<td>Are conclusions sensitive to prespecified analysis choices?</td>
+<td>Scenario ARI/AMI, shared- and all-members Jaccard, contrast coverage</td>
+<td>Agreement and coverage higher across the stated scenarios</td>
+<td>Stable sample IDs, prespecified scenarios, and adequate shared observations</td>
+<td>Robustness to unexamined choices or a probability that membership is correct</td>
+</tr>
+<tr>
+<td>Does a consensus agree with labels excluded from training?</td>
+<td>External-label ARI/AMI, contingency and composition tables</td>
+<td>Agreement higher among evaluable samples</td>
+<td>Labels kept outside training and joined by stable sample identity</td>
+<td>Classification accuracy, ecological ground truth, or causation</td>
+</tr>
+<tr>
+<td>Did a candidate meet the analyst’s evidence requirements?</td>
+<td>
+<code>supported</code>, <code>abstain</code>, <code>uncertain</code>, and the individual gate checks</td>
+<td>All specified checks pass; failures abstain; unavailable evidence is uncertain</td>
+<td>Prespecified thresholds and complete evidence from the same workflow</td>
+<td>The existence of discrete ecological types or universal scientific defensibility</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -207,7 +288,7 @@
 <div class="section level2">
 <h2 id="optional-interactive-interface">Optional interactive interface<a class="anchor" aria-label="anchor" href="#optional-interactive-interface"></a>
 </h2>
-<p><code><a href="reference/launch_som_app.html">launch_som_app()</a></code> returns a <code>shiny.appobj</code>, which can be printed in an interactive R session or passed to <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code>. The application helps configure and inspect a workflow, but it does not return an analysis object. The exported R script, together with its configuration and input data, is the reproducible analysis record.</p>
+<p><code><a href="reference/launch_som_app.html">launch_som_app()</a></code> returns a <code>shiny.appobj</code>, which can be printed in an interactive R session or passed to <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code>. <code>SOMevidence</code> adds no telemetry. When the app runs in a local R session, a selected CSV remains on the local computer. If the app is deployed on a remote Shiny host, selecting a file transfers it to that host; users should follow the host operator’s access and data-handling controls. The application helps configure and inspect a workflow, but it does not return an analysis object. The YAML export is a configuration snapshot. The exported R script can be rerun, but neither export replaces the exact input data, package versions, warnings, failures, and results required for a reproducible analysis record.</p>
 </div>
 <div class="section level2">
 <h2 id="learn-with-real-and-simulated-data">Learn with real and simulated data<a class="anchor" aria-label="anchor" href="#learn-with-real-and-simulated-data"></a>

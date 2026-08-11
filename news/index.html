@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,32 @@
       <small>Source: <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.1.1" id="somevidence-111">SOMevidence 1.1.1<a class="anchor" aria-label="anchor" href="#somevidence-111"></a></h2>
+<div class="section level3">
+<h3 id="computation-and-reporting-1-1-1">Computation and reporting<a class="anchor" aria-label="anchor" href="#computation-and-reporting-1-1-1"></a></h3>
+<ul><li>Checks the conservative upper bound on requested pairwise partition comparisons before any SOM is fitted, so an over-budget workflow stops before spending its training budget.</li>
+<li>Replaces quadratic sample-by-sample equivalence checks for degenerate ARI and AMI cases with contingency-table checks, and prevents integer overflow in AMI calculations for large sample counts.</li>
+<li>Preserves the consensus <code>status</code> values from version 1.1.0 and adds <code>computation_status</code> as <code>computed</code> or <code>not_computed</code>, separately from scientific gate decisions. It also summarizes consensus completeness and assignment coverage.</li>
+<li>Summarizes expected, successful and failed reference-model fits, warnings and success rates by method, including compatible fallbacks for older workflow objects.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="interactive-preflight-1-1-1">Interactive preflight<a class="anchor" aria-label="anchor" href="#interactive-preflight-1-1-1"></a></h3>
+<ul><li>Audits planned versus structurally feasible SOM fits from split sizes and map units, blocks designs for which every planned fit is structurally impossible, and flags partially feasible designs for review.</li>
+<li>Shows the planned pairwise-comparison count and blocks GUI runs that would exceed the same limit enforced by <code><a href="../reference/run_som_workflow.html">run_som_workflow()</a></code>.</li>
+<li>Flags repeated analysis sets and checks split-specific preprocessing and sample-count prerequisites for requested cross-model references.</li>
+<li>Gives actionable CSV errors without exposing local paths, accepts files with an incomplete final line without relying on localized warning text, and improves singular and plural status messages.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="scientific-scope-and-documentation-1-1-1">Scientific scope and documentation<a class="anchor" aria-label="anchor" href="#scientific-scope-and-documentation-1-1-1"></a></h3>
+<ul><li>Clarifies that a <code>supported</code> decision means only that a candidate met analyst-specified evidence requirements; it does not demonstrate that discrete ecological types exist.</li>
+<li>Adds a central metrics dictionary and a validation-scope statement separating software verification, design-conditioned reproducibility, worked examples, and future ADEMP simulation and external validation.</li>
+<li>Documents that the Shiny interface adds no package telemetry, while clearly distinguishing local file handling from remotely hosted deployments; its YAML export is a configuration snapshot.</li>
+<li>Documents the exact, case-sensitive matching behavior of open-data registry filters while preserving version 1.1.0 handling of unmatched values.</li>
+<li>Adds a privacy-aware feature-request template.</li>
+<li>Adds a public local-validation record for the release source; external build identity remains a separate post-release check.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.1.0" id="somevidence-110">SOMevidence 1.1.0<a class="anchor" aria-label="anchor" href="#somevidence-110"></a></h2>
 <div class="section level3">

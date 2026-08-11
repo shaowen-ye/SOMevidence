@@ -108,8 +108,10 @@ workflow <- run_som_workflow(
 summary(workflow)
 #> <summary.som_workflow>
 #>   SOM success: 2 / 2 
-#>   consensus  : 2 / 2 
+#>   consensus  : 2 computed; 0 not_computed
+#>     - k=2: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%
+#>     - k=3: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%
 #>   reference methods:
-#>     - kmeans: 2 succeeded, 0 failed, 0 warnings
-#>     - ward: 2 succeeded, 0 failed, 0 warnings
+#>     - kmeans: 2 expected, 2 succeeded, 0 failed, 0 warnings, 100.0% success
+#>     - ward: 2 expected, 2 succeeded, 0 failed, 0 warnings, 100.0% success
 ```

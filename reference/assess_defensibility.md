@@ -48,3 +48,11 @@ assess_defensibility(
 ## Value
 
 A `som_defensibility` object containing evidence and reasons.
+
+## Details
+
+A `"supported"` status means only that the analyst-specified evidence
+requirements and structural completeness checks were met for the stated
+data, analysis design, preprocessing, model budget and candidate `k`. It
+does not demonstrate that discrete ecological types exist, identify a
+causal mechanism, or establish ecological truth.

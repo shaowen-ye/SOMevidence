@@ -100,7 +100,10 @@ warnings, and new-data mapping objects retain structured warnings.
 
 These are software and evidential safeguards. They do not turn internal
 validity, cross-model agreement, or transfer diagnostics into ecological
-truth.
+truth. The repository’s [validation-scope
+statement](https://github.com/shaowen-ye/SOMevidence/blob/main/VALIDATION_SCOPE.md)
+separates software verification, design-conditioned reproducibility,
+worked examples, and future external validation.
 
 ## Stable and experimental interfaces
 
@@ -133,10 +136,14 @@ api_contract[api_contract$lifecycle == "experimental",
 returns a `shiny.appobj`. It can be printed in an interactive session or
 passed to
 [`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html), but it
-does not return an analysis result. The exported R script, not the
-interactive session, is the executable analysis record. The sensitivity
-and simulation interfaces also remain experimental because their
-scenario descriptions may evolve after broader use.
+does not return an analysis result. `SOMevidence` adds no telemetry. In
+a local session, a selected file remains on the local computer; in a
+remotely deployed app, Shiny transfers it to that host. Its YAML export
+is a configuration snapshot. The exported R script can be rerun, but it
+becomes part of a reproducible record only when retained with the exact
+input, software versions, warnings, failures, and results. The
+sensitivity and simulation interfaces also remain experimental because
+their scenario descriptions may evolve after broader use.
 
 ## Object boundaries are scientific boundaries
 
@@ -154,7 +161,16 @@ The returned classes keep distinct questions apart:
 No object is a certificate of ecological truth. Cross-model agreement is
 not a leaderboard, external-label agreement is not classification
 accuracy, missing evidence remains visible, and insufficient evidence
-may lead to abstention.
+may lead to abstention. A `supported` decision means only that the
+stated analyst-specified evidence requirements and structural checks
+passed for that workflow. It does not prove that discrete ecological
+types exist.
+
+A continuous gradient illustrates the boundary: imposing a fixed `k` can
+yield similar partitions across resamples, starts, or algorithms even
+though the underlying structure contains no discrete classes. Stability
+and cross-model agreement therefore remain conditional evidence, not a
+test of discreteness.
 
 ## Reporting an analysis
 
@@ -164,7 +180,7 @@ sampling design, and gate settings with every analysis:
 ``` r
 
 packageVersion("SOMevidence")
-#> [1] '1.1.0'
+#> [1] '1.1.1'
 sessionInfo()
 #> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu

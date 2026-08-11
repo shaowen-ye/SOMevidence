@@ -1,5 +1,56 @@
 # Changelog
 
+## SOMevidence 1.1.1
+
+### Computation and reporting
+
+- Checks the conservative upper bound on requested pairwise partition
+  comparisons before any SOM is fitted, so an over-budget workflow stops
+  before spending its training budget.
+- Replaces quadratic sample-by-sample equivalence checks for degenerate
+  ARI and AMI cases with contingency-table checks, and prevents integer
+  overflow in AMI calculations for large sample counts.
+- Preserves the consensus `status` values from version 1.1.0 and adds
+  `computation_status` as `computed` or `not_computed`, separately from
+  scientific gate decisions. It also summarizes consensus completeness
+  and assignment coverage.
+- Summarizes expected, successful and failed reference-model fits,
+  warnings and success rates by method, including compatible fallbacks
+  for older workflow objects.
+
+### Interactive preflight
+
+- Audits planned versus structurally feasible SOM fits from split sizes
+  and map units, blocks designs for which every planned fit is
+  structurally impossible, and flags partially feasible designs for
+  review.
+- Shows the planned pairwise-comparison count and blocks GUI runs that
+  would exceed the same limit enforced by
+  [`run_som_workflow()`](https://shaowen-ye.github.io/SOMevidence/reference/run_som_workflow.md).
+- Flags repeated analysis sets and checks split-specific preprocessing
+  and sample-count prerequisites for requested cross-model references.
+- Gives actionable CSV errors without exposing local paths, accepts
+  files with an incomplete final line without relying on localized
+  warning text, and improves singular and plural status messages.
+
+### Scientific scope and documentation
+
+- Clarifies that a `supported` decision means only that a candidate met
+  analyst-specified evidence requirements; it does not demonstrate that
+  discrete ecological types exist.
+- Adds a central metrics dictionary and a validation-scope statement
+  separating software verification, design-conditioned reproducibility,
+  worked examples, and future ADEMP simulation and external validation.
+- Documents that the Shiny interface adds no package telemetry, while
+  clearly distinguishing local file handling from remotely hosted
+  deployments; its YAML export is a configuration snapshot.
+- Documents the exact, case-sensitive matching behavior of open-data
+  registry filters while preserving version 1.1.0 handling of unmatched
+  values.
+- Adds a privacy-aware feature-request template.
+- Adds a public local-validation record for the release source; external
+  build identity remains a separate post-release check.
+
 ## SOMevidence 1.1.0
 
 ### Scientific correctness and reproducibility

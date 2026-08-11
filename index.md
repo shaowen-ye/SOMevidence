@@ -8,19 +8,22 @@ coverage](https://github.com/shaowen-ye/SOMevidence/actions/workflows/test-cover
 [![License:
 GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](https://shaowen-ye.github.io/SOMevidence/LICENSE)
 
-`SOMevidence` is an R package for asking when classifications derived
-from self-organizing maps (SOMs) are reproducible and scientifically
-defensible. It is intended for ecological, environmental, and
-evolutionary data in which sampling groups, monitoring domains, repeated
-observations, multiple data layers, and incomplete transferability are
-common.
+`SOMevidence` is an R package for auditing whether classifications
+derived from self-organizing maps (SOMs) meet prespecified evidence
+requirements under an explicit analysis design. It is intended for
+ecological, environmental, and evolutionary data in which sampling
+groups, monitoring domains, repeated observations, multiple data layers,
+and incomplete transferability are common.
 
 The package uses [`kohonen`](https://cran.r-project.org/package=kohonen)
 as its SOM training backend. Its contribution is an evidence workflow
 around SOM training: explicit data design, leakage-safe preprocessing,
 controlled ensembles, partition stability, cross-model agreement,
 transfer diagnostics, and conditional decisions that can abstain when
-evidence is insufficient.
+evidence is insufficient. The [validation
+scope](https://github.com/shaowen-ye/SOMevidence/blob/main/VALIDATION_SCOPE.md)
+distinguishes software checks, design-conditioned reproducibility,
+worked examples, and external validation.
 
 ## What the package separates
 
@@ -47,9 +50,27 @@ into evidence of ecological truth.
   Gaussian mixture models;
 - held-domain and later-batch mapping without refitting preprocessing on
   the assessment data;
-- explicit defensibility gates with an `"abstain"` outcome; and
+- explicit analyst-specified evidence gates with an `"abstain"` outcome;
+  and
 - analytical graphics plus an optional Shiny interface that exports R
   code and configuration.
+
+## Metrics dictionary
+
+Directions below are diagnostic tendencies within otherwise comparable
+data, preprocessing, scopes, and model budgets. They are not universal
+thresholds and should not be combined into an automatic leaderboard.
+
+| Question | Metrics | Diagnostic direction | Required evidence | Does not establish |
+|----|----|----|----|----|
+| How well does a fitted map represent its analysis data? | Quantization error, topographic error, empty-unit rate | Generally lower within comparable fits; inspect trade-offs | Successful fits using the same variables, preprocessing, scope, and comparable grids | A best map, a true number of classes, or ecological validity |
+| Is a fixed-`k` partition reproducible across the planned ensemble? | Pairwise ARI/AMI, clusterwise Jaccard, joint coverage, complete-partition rate | Agreement and coverage higher; every source partition retains `k` | At least two successful, comparable partitions with adequate shared observations | That discrete types exist, that `k` is optimal, or that labels are correct |
+| How consistently is each sample assigned? | Membership support, assignment entropy, assignment, consensus-label, and replicated coverage | Support and coverage higher; entropy lower | An identifiable consensus with repeated assignments and explicit coverage | A posterior probability or probability that an assignment is correct |
+| Do controlled reference algorithms agree with the SOM partition? | Method-specific SOM-to-reference ARI, method count, reference-fit success | Agreement higher, with all requested methods evaluable | Prespecified reference methods fitted on common splits and preprocessing | Accuracy, independence of evidence, or ecological validation |
+| Does the representation map comparably to a held-out domain? | Assessment-to-analysis distance ratio, unoccupied-unit rate, mapping coverage | Ratio nearer 1, unoccupied rate lower, coverage higher; inspect all fits | Genuine held-domain rows mapped using training-derived preprocessing | Predictive accuracy, causal explanation of shift, or general transferability |
+| Are conclusions sensitive to prespecified analysis choices? | Scenario ARI/AMI, shared- and all-members Jaccard, contrast coverage | Agreement and coverage higher across the stated scenarios | Stable sample IDs, prespecified scenarios, and adequate shared observations | Robustness to unexamined choices or a probability that membership is correct |
+| Does a consensus agree with labels excluded from training? | External-label ARI/AMI, contingency and composition tables | Agreement higher among evaluable samples | Labels kept outside training and joined by stable sample identity | Classification accuracy, ecological ground truth, or causation |
+| Did a candidate meet the analyst’s evidence requirements? | `supported`, `abstain`, `uncertain`, and the individual gate checks | All specified checks pass; failures abstain; unavailable evidence is uncertain | Prespecified thresholds and complete evidence from the same workflow | The existence of discrete ecological types or universal scientific defensibility |
 
 ## Installation
 
@@ -185,10 +206,16 @@ separate evidence streams before interpreting any partition.
 [`launch_som_app()`](https://shaowen-ye.github.io/SOMevidence/reference/launch_som_app.md)
 returns a `shiny.appobj`, which can be printed in an interactive R
 session or passed to
-[`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html). The
+[`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html).
+`SOMevidence` adds no telemetry. When the app runs in a local R session,
+a selected CSV remains on the local computer. If the app is deployed on
+a remote Shiny host, selecting a file transfers it to that host; users
+should follow the host operator’s access and data-handling controls. The
 application helps configure and inspect a workflow, but it does not
-return an analysis object. The exported R script, together with its
-configuration and input data, is the reproducible analysis record.
+return an analysis object. The YAML export is a configuration snapshot.
+The exported R script can be rerun, but neither export replaces the
+exact input data, package versions, warnings, failures, and results
+required for a reproducible analysis record.
 
 ## Learn with real and simulated data
 

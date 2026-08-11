@@ -104,12 +104,15 @@ workflow <- run_som_workflow(
 )
 workflow
 #> <som_workflow>
-#>   SOM fits      : 12 attempted; 12 succeeded; 0 failed; 0 warnings
+#>   SOM fits      : 12 attempted; 12 succeeded; 0 failed; 0 warnings 
 #>   candidate k   : 2, 3, 4 
-#>   consensus     : 2 succeeded; 1 failed
-#>   cross-model   : 18 succeeded; 0 failed; 0 warnings
-#>     - kmeans: 9 succeeded, 0 failed, 0 warnings
-#>     - ward: 9 succeeded, 0 failed, 0 warnings
+#>   consensus     : 2 computed; 1 not_computed
+#>     - k=2: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%
+#>     - k=3: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%
+#>     - k=4: not_computed
+#>   cross-model   : 18 expected; 18 succeeded; 0 failed; 0 warnings ; 100.0% success
+#>     - kmeans: 9 expected, 9 succeeded, 0 failed, 0 warnings, 100.0% success
+#>     - ward: 9 expected, 9 succeeded, 0 failed, 0 warnings, 100.0% success
 ```
 
 The representation audit, partition audit, consensus summaries,
@@ -304,7 +307,7 @@ exact analysis choices with any reported result.
 ``` r
 
 packageVersion("SOMevidence")
-#> [1] '1.1.0'
+#> [1] '1.1.1'
 packageVersion("palmerpenguins")
 #> [1] '0.1.1'
 sessionInfo()
@@ -329,7 +332,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] SOMevidence_1.1.0
+#> [1] SOMevidence_1.1.1
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6         jsonlite_2.0.0       kohonen_3.0.13      

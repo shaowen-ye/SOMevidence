@@ -11,7 +11,7 @@ streams. It does not combine them into a score or select a winning k."></head><b
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -145,10 +145,12 @@ failure logs.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">workflow</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;summary.som_workflow&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   SOM success: 2 / 2 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   consensus  : 2 / 2 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   consensus  : 2 computed; 0 not_computed</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     - k=2: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     - k=3: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   reference methods:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     - kmeans: 2 succeeded, 0 failed, 0 warnings</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     - ward: 2 succeeded, 0 failed, 0 warnings</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     - kmeans: 2 expected, 2 succeeded, 0 failed, 0 warnings, 100.0% success</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     - ward: 2 expected, 2 succeeded, 0 failed, 0 warnings, 100.0% success</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
