@@ -1,10 +1,18 @@
-# SOMevidence (development version)
+# SOMevidence 1.2.1
 
 ## Documentation and release evidence
 
-- Preserves explicit row identity when only some row names resemble generated
-  `sample_<integer>` identifiers; only fully generic sequences are now treated
-  as generated when `id` is omitted.
+- Adds four guided Shiny teaching examples, resettable recommended settings,
+  downloadable example and template CSV files, evidence interpretation and
+  troubleshooting panels, and a dedicated interface guide.
+- Adds in-session English/Chinese switching, bilingual examples and result
+  guidance, hover explanations for controls and key metrics, and a draggable,
+  keyboard-accessible divider between the control and result panels.
+- Reorganizes the six vignettes as a numbered learning path and rewrites them
+  in shorter, task-centred language for applied ecological users.
+- Clarifies conservative identity provenance and the separate multi-layer
+  row-alignment rule; untrusted layer row names must not be used as matching
+  evidence, and intentional sample identities should be supplied as `id`.
 - Replaces a stale GUI version reference with a version-neutral statement of
   the current configuration-import boundary.
 - Clarifies the conditional scope of the grouped-simulation correlation,

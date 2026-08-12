@@ -1,0 +1,168 @@
+---
+title: "Start here: a complete SOM evidence workflow"
+author: "Shaowen Ye"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Start here: a complete SOM evidence workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## What this example does
+
+This is the shortest complete route through `SOMevidence`. We will:
+
+1. prepare data and a resampling design;
+2. fit a small SOM ensemble;
+3. inspect the map and candidate partitions; and
+4. compare the SOM partitions with two reference methods.
+
+The example uses simulated classes, so we know how the data were generated.
+With field data, the underlying groups are unknown. A stable partition is
+evidence worth reporting, but it is not proof of an ecological type.
+
+```{r data}
+library(SOMevidence)
+
+dat <- simulate_som_scenario(
+  "clusters",
+  n = 90,
+  p = 6,
+  seed = 10,
+  id = paste0("example_", seq_len(90))
+)
+dat
+```
+
+The simulated class label is stored in metadata. It does not enter the SOM
+training matrix.
+
+## Describe the analysis before fitting
+
+Rows are independent in this simulation, so ordinary subsampling is suitable.
+For repeated observations from sites, individuals or transects, resample whole
+groups instead. See the resampling tutorial for worked examples.
+
+```{r design}
+resamples <- som_resamples(
+  dat,
+  method = "subsample",
+  repeats = 3,
+  prop = 0.8,
+  seed = 20
+)
+
+spec <- som_spec(
+  grids = list(c(3, 2), c(4, 3)),
+  seeds = c(30, 31),
+  rlen = 40,
+  k = 2:4
+)
+```
+
+This design attempts 12 SOM fits: three subsamples, two grids and two random
+starts. The small budget keeps the example quick. It is not a default for a
+research analysis.
+
+## Run the workflow
+
+```{r workflow}
+workflow <- run_som_workflow(
+  dat,
+  spec,
+  resamples,
+  preprocess = som_preprocess(
+    "identity",
+    center = TRUE,
+    scale = TRUE
+  ),
+  cross_models = c("kmeans", "ward")
+)
+workflow
+summary(workflow)
+```
+
+Preprocessing is learned within each subsample. Assessment rows therefore do
+not influence the means or standard deviations used for training.
+
+## Read the results in order
+
+Start with fit success and map diagnostics.
+
+```{r representation}
+workflow$audit$grid_summary
+plot(workflow$audit)
+```
+
+Quantization error, topographic error and empty-unit rate describe the map.
+None of them tells us whether a hard partition is reproducible.
+
+Next, inspect the candidate values of `k`.
+
+```{r partitions}
+workflow$partitions$stability
+plot(workflow$partitions)
+```
+
+ARI and AMI measure agreement among repeated partitions. They are not
+classification accuracy. Read them together with the number of successful
+fits and the joint sample coverage.
+
+Now look at sample-level support for one prespecified candidate. We use `k = 3`
+because this teaching simulation has three generated classes.
+
+```{r consensus}
+consensus_k3 <- workflow$consensus$k3
+consensus_k3$cluster_summary
+plot(consensus_k3)
+```
+
+Low support or high assignment entropy points to uncertain membership. A
+consensus label is a summary of repeated assignments, not a probability that
+the label is correct.
+
+Finally, compare the SOM partition with K-means and Ward.D2 on the same
+eligible analysis splits.
+
+```{r cross-model}
+workflow$cross_comparison$summary
+plot(workflow$cross_comparison)
+```
+
+Cross-model agreement is useful triangulation. It should not be turned into a
+model ranking.
+
+## Use known labels only after fitting
+
+Because this is a simulation, we can compare the `k = 3` consensus with the
+generated labels. Those labels were not used for training.
+
+```{r external-labels}
+evaluate_external_labels(consensus_k3)
+```
+
+In a field study, a recorded category may itself be uncertain or answer a
+different biological question. Treat it as external evidence, not automatic
+ground truth.
+
+## What to save
+
+Keep the following with any reported analysis:
+
+- the input data and their provenance;
+- stable sample identifiers and the sampling design;
+- transformations, grids, seeds, iterations and candidate `k` values;
+- warnings, failed fits and all evidence tables; and
+- the package version and R session information.
+
+```{r reproducibility}
+packageVersion("SOMevidence")
+sessionInfo()
+```
+
+Next, use the guided Shiny tutorial for an interactive introduction or the
+resampling tutorial to match the workflow to a real monitoring design.
