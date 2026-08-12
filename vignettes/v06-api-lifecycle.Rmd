@@ -1,0 +1,150 @@
+---
+title: "Reproducibility and API versions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Reproducibility and API versions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Why versions matter
+
+An analysis can change when a function argument, default or returned field
+changes. The function name may stay the same. `SOMevidence` therefore keeps
+machine-readable records of its public functions and result objects.
+
+These records serve two purposes:
+
+- package tests can detect an unintended interface change; and
+- analysts can see which structure belongs to a released version.
+
+They do not guarantee identical numerical results when an analysis relies on
+defaults that later change. For a published workflow, record all important
+settings directly.
+
+## Inspect the current contracts
+
+```{r contracts}
+contract_path <- function(name) {
+  candidates <- c(
+    file.path("inst", "extdata", name),
+    file.path("..", "inst", "extdata", name),
+    system.file("extdata", name, package = "SOMevidence")
+  )
+  available <- candidates[nzchar(candidates) & file.exists(candidates)]
+  if (!length(available)) {
+    stop("The requested API contract is not available: ", name)
+  }
+  available[[1L]]
+}
+
+api_contract <- utils::read.csv(
+  contract_path("api-contract-v1.2.0.csv"),
+  check.names = FALSE
+)
+
+api_formals <- utils::read.csv(
+  contract_path("api-formals-v1.2.0.csv"),
+  check.names = FALSE
+)
+
+object_contract <- utils::read.csv(
+  contract_path("object-contract-v1.2.0.csv"),
+  check.names = FALSE
+)
+
+table(api_contract$lifecycle)
+head(api_formals)
+head(object_contract[c("class", "lifecycle")])
+```
+
+The API contract lists exported functions and their lifecycle. The formals
+contract records arguments and defaults. The object contract records the
+fields that downstream code may expect from public results.
+
+The version 1.2.0 object contract also gives each result a
+`som_contract_version`. It can align external labels by sample ID and keeps
+missing, excluded and insufficiently replicated records separate.
+
+Release history and changes to defaults belong in `NEWS.md`. This tutorial
+focuses on how to use the contracts rather than repeating the changelog.
+
+## Stable and experimental functions
+
+Most functions used for data preparation, resampling, SOM fitting, audits and
+transfer are stable. Their established arguments and documented result fields
+are maintained within a major version.
+
+Some interfaces remain experimental:
+
+```{r experimental}
+api_contract[
+  api_contract$lifecycle == "experimental",
+  c("function", "return_class", "notes")
+]
+```
+
+Experimental does not mean untested. It means that feedback from wider use may
+still change the interface or the way results are organized. In version 1.2.0,
+this applies to the Shiny app, simulation helpers, sensitivity workflow and
+continuous cross-fit representation audit.
+
+The Shiny app can export a runnable R script. Its YAML file is a configuration
+snapshot, not an importable analysis file. Keep the script with the data,
+software versions, warnings and results.
+
+## Each result answers one question
+
+The package uses separate object classes so that different types of evidence
+are not confused:
+
+| Object | Question |
+|---|---|
+| `som_audit` | How well did the maps represent the analysis data? |
+| `som_representation_audit` | How similar was sample topology across selected maps? |
+| `som_partitions` | How reproducible were candidate hard partitions? |
+| `som_consensus` | Which sample assignments were repeatedly supported? |
+| `som_cross_comparison` | Did reference methods produce similar partitions? |
+| `som_transfer_audit` | How did held-out domains map to trained SOMs? |
+| `som_external_assessment` | How did a consensus agree with labels excluded from training? |
+| `som_defensibility` | Did an analyst's stated evidence requirements pass? |
+
+No object is a certificate of ecological truth. A `supported` decision means
+that the stated checks passed for that workflow. It does not prove that nature
+contains the displayed classes.
+
+## Open an older saved object
+
+`upgrade_som_object()` can add fields when the migration is deterministic and
+the older object already contains the required evidence.
+
+```{r upgrade, eval = FALSE}
+old_result <- readRDS("saved-som-result.rds")
+current_result <- upgrade_som_object(old_result)
+```
+
+If the older result lacks required evidence, refit the analysis. Do not invent
+missing fields or copy them from another run.
+
+## Record a publication analysis
+
+Save:
+
+- the package and R versions;
+- input provenance and stable sample IDs;
+- preprocessing and resampling choices;
+- grids, seeds, iterations and candidate `k` values;
+- reference methods and any decision rules; and
+- complete warnings, failures and evidence tables.
+
+```{r report-version}
+packageVersion("SOMevidence")
+sessionInfo()
+```
+
+The contract tells software what a result contains. The analysis record tells
+readers how that result was produced. A reproducible study needs both.

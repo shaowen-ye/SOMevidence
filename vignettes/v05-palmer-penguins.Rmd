@@ -1,0 +1,162 @@
+---
+title: "Worked example: Palmer penguin morphology"
+author: "Shaowen Ye"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Worked example: Palmer penguin morphology}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_tutorial_dependencies <-
+  requireNamespace("palmerpenguins", quietly = TRUE) &&
+  requireNamespace("ggplot2", quietly = TRUE)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = has_tutorial_dependencies
+)
+```
+
+## The question
+
+This example asks how reproducibly a SOM represents and partitions four penguin
+body measurements. Species is kept as an external label and is inspected only
+after fitting.
+
+The example does not assume that a SOM class is a species. Morphology overlaps
+among species and does not define taxonomy by itself.
+
+The `palmerpenguins` package distributes the data under CC0. Its documentation
+provides the original data source and citations. If the optional package is not
+installed, this vignette displays the code without running it.
+
+## Prepare the data
+
+```{r prepare-data}
+library(SOMevidence)
+
+raw <- palmerpenguins::penguins
+variables <- c(
+  "bill_length_mm",
+  "bill_depth_mm",
+  "flipper_length_mm",
+  "body_mass_g"
+)
+
+keep <- stats::complete.cases(
+  raw[, c(variables, "species", "year")]
+)
+penguins <- raw[keep, , drop = FALSE]
+sample_ids <- sprintf("penguin_%03d", seq_len(nrow(penguins)))
+
+morphology <- som_data(
+  x = penguins[, variables],
+  id = sample_ids,
+  time = penguins$year,
+  domain = factor(penguins$year),
+  external_label = stats::setNames(
+    as.character(penguins$species),
+    sample_ids
+  )
+)
+morphology
+```
+
+Stable IDs link results back to observations. Year defines the transfer domain.
+Species remains outside the training matrix.
+
+## Leave out one year at a time
+
+Each split trains on two sampling years and assesses the third. Preprocessing
+is estimated from the training years only.
+
+```{r design}
+year_splits <- som_resamples(
+  morphology,
+  method = "leave_domain_out",
+  domain = "domain"
+)
+
+spec <- som_spec(
+  grids = list(c(4, 3), c(5, 4)),
+  seeds = c(41, 42),
+  rlen = 50,
+  k = 2:4
+)
+
+year_splits
+```
+
+The ensemble is intentionally small so that the vignette builds quickly.
+
+## Fit and inspect the workflow
+
+```{r workflow}
+workflow <- run_som_workflow(
+  morphology,
+  spec,
+  year_splits,
+  preprocess = som_preprocess(
+    center = TRUE,
+    scale = TRUE
+  ),
+  cross_models = c("kmeans", "ward")
+)
+summary(workflow)
+```
+
+Read the evidence streams separately.
+
+```{r summaries}
+workflow$audit$grid_summary
+workflow$partitions$stability
+workflow$consensus$k3$cluster_summary
+workflow$cross_comparison$summary
+
+transfer <- audit_transfer(workflow$ensemble)
+transfer$metrics
+```
+
+```{r evidence-plots, fig.width = 7, fig.height = 4, out.width = "90%"}
+plot(workflow$audit)
+plot(workflow$partitions)
+plot(transfer)
+```
+
+The map audit concerns representation. The partition plot concerns repeated
+hard classifications. The transfer plot concerns the held-out year. None is a
+classification-accuracy plot.
+
+## Compare with species after fitting
+
+For this teaching example, inspect `k = 3` because the data contain three
+recorded species. This is a choice made before viewing the agreement results.
+It is not evidence that `k = 3` is the best unsupervised partition.
+
+```{r external-labels}
+consensus_k3 <- workflow$consensus$k3
+external <- evaluate_external_labels(consensus_k3)
+
+external
+external$contingency
+external$composition
+```
+
+ARI, AMI and the contingency table describe agreement among the evaluable
+penguins. They do not prove that the partition is biologically correct. The
+main lesson is procedural: keep labels out of unsupervised training, then bring
+them back transparently for interpretation.
+
+## Save the record
+
+Keep the exact data preparation, IDs, transfer design, SOM settings, warnings
+and failed fits with the result.
+
+```{r reproducibility}
+packageVersion("SOMevidence")
+packageVersion("palmerpenguins")
+sessionInfo()
+```

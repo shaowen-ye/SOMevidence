@@ -23,9 +23,10 @@ som_data(
 
 \item{id}{Optional unique sample identifiers. Supplying \code{id} explicitly is
 recommended for scientific analyses. If it is omitted, informative row
-names are used unless every row name follows the package-like
-\verb{sample_<integer>} or \verb{simulation_<integer>} pattern; such fully generic
-sequences are treated as generated rather than independently stable.}
+names are used unless any row name follows the package-like
+\verb{sample_<integer>} or \verb{simulation_<integer>} pattern. Mixed provenance
+cannot be inferred safely, so such row-name vectors are treated as
+generated; pass \code{id} explicitly to confirm intentional identifiers.}
 
 \item{group}{Optional sampling-group identifiers.}
 
@@ -52,8 +53,13 @@ row order is treated as authoritative. The scalar \code{id_source} records
 whether sample identifiers were supplied, taken from explicit
 non-positional row names or generated locally. Stable identifiers are
 required to compare different data-coverage scenarios. A mixture of
-generic and study-specific row names is retained as explicit identity;
-one generic name does not cause the remaining row names to be discarded.
+generic and study-specific row names is conservatively treated as
+generated unless the intended identifiers are supplied through \code{id}.
+This provenance label does not disable multi-layer row-name alignment:
+when every layer has row names, later layers are still matched to the
+first layer by those names. If such layer row names are not trustworthy,
+first place every layer in the same row order, remove its row names, and
+pass the confirmed identifiers through \code{id}.
 }
 \description{
 Construct a design-explicit SOM data object

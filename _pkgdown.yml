@@ -17,15 +17,14 @@ navbar:
       aria-label: GitHub repository
 
 articles:
-  - title: Core workflow
+  - title: Learning path
     contents:
-      - getting-started
-      - api-lifecycle
-      - design-aware-resampling
-      - visualizing-evidence
-  - title: Applied tutorials
-    contents:
-      - palmer-penguins
+      - v01-getting-started
+      - v02-shiny-interface
+      - v03-design-aware-resampling
+      - v04-visualizing-evidence
+      - v05-palmer-penguins
+      - v06-api-lifecycle
 
 reference:
   - title: Data, preprocessing and design

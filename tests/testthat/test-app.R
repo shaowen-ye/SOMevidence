@@ -754,6 +754,160 @@ test_that("GUI diagnostics report every failure and warning stream", {
   expect_identical(choices, c("k = 2" = "k2"))
 })
 
+test_that("guided GUI examples represent distinct study-design questions", {
+  catalog <- SOMevidence:::.gui_example_catalog()
+  expect_identical(
+    names(catalog), c("clusters", "gradient", "grouped", "transfer")
+  )
+  expect_identical(
+    SOMevidence:::.gui_example_choices(),
+    stats::setNames(
+      names(catalog), vapply(catalog, `[[`, character(1), "label")
+    )
+  )
+
+  for (example_id in names(catalog)) {
+    example <- SOMevidence:::.gui_builtin_example(example_id)
+    expect_equal(nrow(example), 180L, info = example_id)
+    expect_equal(sum(grepl("^indicator_", names(example))), 6L)
+    expect_false(any(grepl("^environment_", names(example))))
+    expect_true(anyDuplicated(example$sample_id) == 0L)
+
+    source_lines <- SOMevidence:::.gui_example_source_lines(example_id)
+    expect_error(parse(text = source_lines), NA, info = example_id)
+    environment <- new.env(parent = asNamespace("SOMevidence"))
+    eval(parse(text = source_lines), envir = environment)
+    expect_equal(environment$raw, example, info = example_id)
+  }
+
+  expect_true(
+    "external_label" %in%
+      names(SOMevidence:::.gui_builtin_example("clusters"))
+  )
+  expect_false(
+    "external_label" %in%
+      names(SOMevidence:::.gui_builtin_example("gradient"))
+  )
+  expect_true(
+    "sampling_group" %in%
+      names(SOMevidence:::.gui_builtin_example("grouped"))
+  )
+  expect_true(
+    "reporting_region" %in%
+      names(SOMevidence:::.gui_builtin_example("transfer"))
+  )
+
+  expect_identical(
+    SOMevidence:::.gui_example_defaults("grouped")$resample_method,
+    "group_subsample"
+  )
+  expect_identical(
+    SOMevidence:::.gui_example_defaults("transfer")$resample_method,
+    "leave_domain_out"
+  )
+  expect_error(
+    SOMevidence:::.gui_example_spec("unknown"),
+    "available built-in example"
+  )
+})
+
+test_that("GUI help separates evidence, action and interpretive boundaries", {
+  guide <- SOMevidence:::.gui_metric_guide()
+  expect_identical(nrow(guide), 4L)
+  expect_identical(
+    guide$`Evidence view`,
+    c("Representation", "Partition stability", "Consensus", "Cross-model")
+  )
+  expect_match(
+    guide$`Do not infer`[guide$`Evidence view` == "Cross-model"],
+    "Accuracy"
+  )
+
+  for (view in c("audit", "partitions", "consensus", "cross_model")) {
+    guidance <- SOMevidence:::.gui_view_guidance(view)
+    expect_named(guidance, c("title", "question", "inspect", "boundary"))
+    expect_true(all(nzchar(unlist(guidance))))
+  }
+
+  troubleshooting <- SOMevidence:::.gui_troubleshooting_guide()
+  expect_true(nrow(troubleshooting) >= 5L)
+  expect_true(all(nzchar(troubleshooting$Action)))
+
+  template <- SOMevidence:::.gui_csv_template()
+  expect_equal(nrow(template), 12L)
+  expect_named(template, c(
+    "sample_id", "sampling_group", "survey_date", "reporting_region",
+    "measure_temperature", "measure_nutrient", "external_label"
+  ))
+  expect_true(anyDuplicated(template$sample_id) == 0L)
+})
+
+test_that("GUI bilingual labels and tooltips cover the guided workflow", {
+  translations <- SOMevidence:::.gui_translations()
+  tooltips <- SOMevidence:::.gui_tooltips()
+  expect_identical(names(translations$en), names(translations$zh))
+  expect_identical(names(tooltips$en), names(tooltips$zh))
+  expect_true(all(nzchar(translations$en)))
+  expect_true(all(nzchar(translations$zh)))
+  expect_true(all(nzchar(tooltips$en)))
+  expect_true(all(nzchar(tooltips$zh)))
+  expect_identical(SOMevidence:::.gui_language("zh"), "zh")
+  expect_identical(SOMevidence:::.gui_language("anything"), "en")
+  expect_match(SOMevidence:::.gui_tr("zh", "run_workflow"), "运行")
+  expect_match(tooltips$zh[["splitter"]], "拖动")
+
+  chinese_choices <- SOMevidence:::.gui_example_choices("zh")
+  expect_identical(unname(chinese_choices), names(
+    SOMevidence:::.gui_example_catalog()
+  ))
+  expect_true(all(grepl("[一-鿿]", names(chinese_choices))))
+
+  chinese_examples <- SOMevidence:::.gui_example_table("zh")
+  expect_named(chinese_examples, c("示例", "设计问题", "推荐重抽样"))
+  expect_true(all(grepl("[一-鿿]", chinese_examples[[1L]])))
+
+  chinese_metrics <- SOMevidence:::.gui_metric_guide("zh")
+  expect_named(chinese_metrics, c("证据视图", "主要问题", "不应推断"))
+  chinese_troubleshooting <- SOMevidence:::.gui_troubleshooting_guide("zh")
+  expect_named(chinese_troubleshooting, c("信息", "处理方法"))
+
+  span <- SOMevidence:::.gui_i18n("candidate_k")
+  expect_identical(span$attribs[["data-somevidence-tip"]], "candidate_k")
+  expect_match(
+    span$attribs[["data-somevidence-tooltip"]],
+    "partition sizes"
+  )
+  expect_identical(span$attribs$tabindex, "0")
+
+  app_source <- paste(deparse(body(launch_som_app)), collapse = "\n")
+  expect_match(app_source, "somevidence-splitter", fixed = TRUE)
+  expect_match(app_source, "pointerdown", fixed = TRUE)
+  expect_match(app_source, "dblclick", fixed = TRUE)
+  expect_match(app_source, "somevidence-sidebar-pct", fixed = TRUE)
+  expect_match(app_source, "somevidence-tooltip", fixed = TRUE)
+  expect_match(app_source, "aria-describedby", fixed = TRUE)
+  expect_match(app_source, "targetFor", fixed = TRUE)
+  expect_match(app_source, "label.querySelector", fixed = TRUE)
+})
+
+test_that("GUI localizes tables and status without changing evidence", {
+  audit <- SOMevidence:::.gui_data_audit(
+    data.frame(sample_id = c("a", "b"), x = 1:2),
+    "x"
+  )
+  localized <- SOMevidence:::.gui_localize_data_audit(audit, "zh")
+  expect_named(localized, c("检查项", "结果", "状态"))
+  expect_true("就绪" %in% localized[["状态"]])
+
+  english <- SOMevidence:::.gui_table_labels(data.frame(
+    k = 2L, median_ari = 0.5
+  ))
+  chinese <- SOMevidence:::.gui_table_labels(
+    data.frame(k = 2L, median_ari = 0.5), "zh"
+  )
+  expect_equal(unname(chinese[["ARI 中位数"]]), english[["Median ARI"]])
+})
+
 test_that("optional GUI constructs a Shiny application", {
   skip_if_not_installed("shiny")
   skip_if_not_installed("ggplot2")
@@ -768,8 +922,10 @@ test_that("GUI server runs a compact built-in reproducible workflow", {
 
   shiny::testServer(app$serverFuncSource(), {
     session$setInputs(
+      language = "en",
       data_source = "built_in",
-      predictors = c("environment_01", "environment_02", "environment_03"),
+      example_id = "clusters",
+      predictors = c("indicator_01", "indicator_02", "indicator_03"),
       id_column = "sample_id",
       group_column = "None",
       time_column = "None",
@@ -793,6 +949,7 @@ test_that("GUI server runs a compact built-in reproducible workflow", {
     )
     result <- analysis()
     expect_s3_class(result$workflow, "som_workflow")
+    expect_identical(result$config$example_id, "clusters")
     expect_identical(result$config$resample_method, "subsample")
     expect_identical(result$config$seeds, 1:2)
     expect_true(nrow(result$workflow$partitions$stability) > 0L)
@@ -801,6 +958,29 @@ test_that("GUI server runs a compact built-in reproducible workflow", {
     expect_match(output$preflight_status, "planned fits")
     expect_match(output$preflight_status, "eligible")
     expect_match(output$diagnostics_table, "Failures")
+    example_summary <- paste(unlist(output$example_summary), collapse = " ")
+    view_guidance <- paste(unlist(output$view_guidance), collapse = " ")
+    expect_match(example_summary, "same classes reappear")
+    expect_match(view_guidance, "Representation diagnostics")
+    expect_match(output$metric_guide, "Do not infer")
+    expect_match(output$troubleshooting_guide, "Select predictors")
+
+    session$setInputs(language = "zh")
+    expect_identical(input$language, "zh")
+    expect_identical(
+      input$predictors,
+      c("indicator_01", "indicator_02", "indicator_03")
+    )
+    expect_identical(input$id_column, "sample_id")
+    expect_identical(input$external_column, "external_label")
+    expect_identical(result$config$seeds, 1:2)
+    expect_match(output$preflight_status, "预检查就绪")
+    expect_match(output$metric_guide, "不应推断")
+    expect_match(output$troubleshooting_guide, "处理方法")
+    expect_match(
+      paste(unlist(output$view_guidance), collapse = " "),
+      "表征质量诊断"
+    )
 
     session$setInputs(consensus_k = "k3")
     expect_identical(input$consensus_k, "k3")
