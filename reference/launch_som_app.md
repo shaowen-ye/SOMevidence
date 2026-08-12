@@ -1,15 +1,19 @@
 # Launch the optional reproducible SOM interface
 
 The Shiny interface exposes a compact subset of the package workflow for
-teaching and exploratory configuration. Every completed run can export
-its exact R script and a YAML configuration snapshot. The GUI cannot
-currently import that snapshot to restore its controls. The exported
-script, not the GUI session or snapshot, is the executable analysis
-record. The interface is designed for a local R session, and
-`SOMevidence` sends no telemetry. In a local session, selected files
-remain on the local computer. A remotely deployed Shiny application
-transfers selected files to its host, whose operator is responsible for
-access controls and data handling.
+teaching and exploratory configuration. Four guided simulations
+illustrate discrete classes, a continuous gradient, grouped sampling and
+transfer across monitoring domains. Recommended settings, downloadable
+example data, a generic CSV template and in-app interpretation guidance
+support first-time use. Every completed run can export its exact R
+script and a YAML configuration snapshot. The GUI cannot currently
+import that snapshot to restore its controls. The exported script, not
+the GUI session or snapshot, is the executable analysis record. The
+interface is designed for a local R session, and `SOMevidence` sends no
+telemetry. In a local session, selected files remain on the local
+computer. A remotely deployed Shiny application transfers selected files
+to its host, whose operator is responsible for access controls and data
+handling.
 
 ## Usage
 

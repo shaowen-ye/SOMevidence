@@ -400,18 +400,17 @@ version 3 or later. See
 
 # Articles
 
-### Core workflow
+### Learning path
 
-- [Auditing a SOM ensemble without forcing
-  classes](https://shaowen-ye.github.io/SOMevidence/articles/getting-started.md):
-- [API lifecycle and reproducibility
-  contracts](https://shaowen-ye.github.io/SOMevidence/articles/api-lifecycle.md):
-- [Respecting groups and monitoring domains in SOM
-  validation](https://shaowen-ye.github.io/SOMevidence/articles/design-aware-resampling.md):
-- [Visualizing SOM structure and
-  uncertainty](https://shaowen-ye.github.io/SOMevidence/articles/visualizing-evidence.md):
-
-### Applied tutorials
-
-- [A real-data audit of Palmer penguin
-  morphology](https://shaowen-ye.github.io/SOMevidence/articles/palmer-penguins.md):
+- [Start here: a complete SOM evidence
+  workflow](https://shaowen-ye.github.io/SOMevidence/articles/v01-getting-started.md):
+- [Using the guided Shiny
+  app](https://shaowen-ye.github.io/SOMevidence/articles/v02-shiny-interface.md):
+- [Choose the right resampling
+  unit](https://shaowen-ye.github.io/SOMevidence/articles/v03-design-aware-resampling.md):
+- [Read the maps and uncertainty
+  plots](https://shaowen-ye.github.io/SOMevidence/articles/v04-visualizing-evidence.md):
+- [Worked example: Palmer penguin
+  morphology](https://shaowen-ye.github.io/SOMevidence/articles/v05-palmer-penguins.md):
+- [Reproducibility and API
+  versions](https://shaowen-ye.github.io/SOMevidence/articles/v06-api-lifecycle.md):

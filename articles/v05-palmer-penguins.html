@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>A real-data audit of Palmer penguin morphology • SOMevidence</title>
+<title>Worked example: Palmer penguin morphology • SOMevidence</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="A real-data audit of Palmer penguin morphology">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Worked example: Palmer penguin morphology">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,45 +51,46 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>A real-data audit of Palmer penguin morphology</h1>
+      <h1>Worked example: Palmer penguin morphology</h1>
                         <h4 data-toc-skip class="author">Shaowen Ye</h4>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/vignettes/palmer-penguins.Rmd" class="external-link"><code>vignettes/palmer-penguins.Rmd</code></a></small>
-      <div class="d-none name"><code>palmer-penguins.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/vignettes/v05-palmer-penguins.Rmd" class="external-link"><code>vignettes/v05-palmer-penguins.Rmd</code></a></small>
+      <div class="d-none name"><code>v05-palmer-penguins.Rmd</code></div>
     </div>
 
     
     
 <div class="section level2">
-<h2 id="purpose-and-inferential-boundary">Purpose and inferential boundary<a class="anchor" aria-label="anchor" href="#purpose-and-inferential-boundary"></a>
+<h2 id="the-question">The question<a class="anchor" aria-label="anchor" href="#the-question"></a>
 </h2>
-<p>This tutorial uses an openly licensed, familiar dataset to show the
-complete workflow on real observations. It does not claim that penguin
-species are latent SOM classes or that morphology alone defines species.
-The four morphological variables are used for unsupervised training.
-Species is retained only as an external label and is inspected after the
-ensemble and consensus partition have been constructed.</p>
-<p>The data are distributed by the <a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link"><code>palmerpenguins</code></a>
-package under CC0. Measurements were collected for Adelie, Chinstrap,
-and Gentoo penguins in the Palmer Archipelago from 2007 to 2009. The
-original data publication and source citations are provided by the data
-package.</p>
-<p>If the optional tutorial dependencies are unavailable, the code is
-displayed but not evaluated when the vignette is built.</p>
+<p>This example asks how reproducibly a SOM represents and partitions
+four penguin body measurements. Species is kept as an external label and
+is inspected only after fitting.</p>
+<p>The example does not assume that a SOM class is a species. Morphology
+overlaps among species and does not define taxonomy by itself.</p>
+<p>The <code>palmerpenguins</code> package distributes the data under
+CC0. Its documentation provides the original data source and citations.
+If the optional package is not installed, this vignette displays the
+code without running it.</p>
 </div>
 <div class="section level2">
-<h2 id="build-a-design-explicit-data-object">Build a design-explicit data object<a class="anchor" aria-label="anchor" href="#build-a-design-explicit-data-object"></a>
+<h2 id="prepare-the-data">Prepare the data<a class="anchor" aria-label="anchor" href="#prepare-the-data"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shaowen-ye.github.io/SOMevidence/">SOMevidence</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="fu">palmerpenguins</span><span class="fu">::</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/reference/penguins.html" class="external-link">penguins</a></span></span>
 <span><span class="va">variables</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="st">"bill_length_mm"</span>, <span class="st">"bill_depth_mm"</span>,</span>
-<span>  <span class="st">"flipper_length_mm"</span>, <span class="st">"body_mass_g"</span></span>
+<span>  <span class="st">"bill_length_mm"</span>,</span>
+<span>  <span class="st">"bill_depth_mm"</span>,</span>
+<span>  <span class="st">"flipper_length_mm"</span>,</span>
+<span>  <span class="st">"body_mass_g"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/complete.cases.html" class="external-link">complete.cases</a></span><span class="op">(</span><span class="va">raw</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">variables</span>, <span class="st">"species"</span>, <span class="st">"year"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/complete.cases.html" class="external-link">complete.cases</a></span><span class="op">(</span></span>
+<span>  <span class="va">raw</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">variables</span>, <span class="st">"species"</span>, <span class="st">"year"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">penguins</span> <span class="op">&lt;-</span> <span class="va">raw</span><span class="op">[</span><span class="va">keep</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span><span class="va">sample_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"penguin_%03d"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">penguins</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -98,7 +99,10 @@ displayed but not evaluated when the vignette is built.</p>
 <span>  id <span class="op">=</span> <span class="va">sample_ids</span>,</span>
 <span>  time <span class="op">=</span> <span class="va">penguins</span><span class="op">$</span><span class="va">year</span>,</span>
 <span>  domain <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">penguins</span><span class="op">$</span><span class="va">year</span><span class="op">)</span>,</span>
-<span>  external_label <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">penguins</span><span class="op">$</span><span class="va">species</span><span class="op">)</span>, <span class="va">sample_ids</span><span class="op">)</span></span>
+<span>  external_label <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">penguins</span><span class="op">$</span><span class="va">species</span><span class="op">)</span>,</span>
+<span>    <span class="va">sample_ids</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">morphology</span></span>
 <span><span class="co">#&gt; &lt;som_data&gt;</span></span>
@@ -107,19 +111,14 @@ displayed but not evaluated when the vignette is built.</p>
 <span><span class="co">#&gt;   id source: provided </span></span>
 <span><span class="co">#&gt;     - data: 4 variables, 0.0% missing</span></span>
 <span><span class="co">#&gt;   design : time, domain, external_label</span></span></code></pre></div>
-<p>Stable row identifiers make later joins auditable. Sampling year is
-declared as a transfer domain. Species is stored in metadata and never
-enters the SOM input matrix.</p>
+<p>Stable IDs link results back to observations. Year defines the
+transfer domain. Species remains outside the training matrix.</p>
 </div>
 <div class="section level2">
-<h2 id="prespecify-the-transfer-design-and-ensemble-budget">Prespecify the transfer design and ensemble budget<a class="anchor" aria-label="anchor" href="#prespecify-the-transfer-design-and-ensemble-budget"></a>
+<h2 id="leave-out-one-year-at-a-time">Leave out one year at a time<a class="anchor" aria-label="anchor" href="#leave-out-one-year-at-a-time"></a>
 </h2>
-<p>Each split below leaves out one sampling year. The map and every
-preprocessing quantity are fitted using the other years; observations
-from the held-out year are assessment data. This demonstration uses a
-small budget so that the vignette remains quick to build. A substantive
-analysis should justify its grids, seeds, iterations, candidate
-<code>k</code>, and transfer domains before fitting.</p>
+<p>Each split trains on two sampling years and assesses the third.
+Preprocessing is estimated from the training years only.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">year_splits</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/som_resamples.html">som_resamples</a></span><span class="op">(</span></span>
 <span>  <span class="va">morphology</span>,</span>
@@ -140,39 +139,35 @@ analysis should justify its grids, seeds, iterations, candidate
 <span><span class="co">#&gt;   splits    : 3 </span></span>
 <span><span class="co">#&gt;   unique analysis sets: 3 </span></span>
 <span><span class="co">#&gt;   analysis  : 223-233 rows</span></span>
-<span><span class="co">#&gt;   assessment: 109-119 rows</span></span>
-<span><span class="fu"><a href="../reference/expand_som_spec.html">expand_som_spec</a></span><span class="op">(</span><span class="va">spec</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   xdim ydim grid_id seed    model_id</span></span>
-<span><span class="co">#&gt; 1    4    3       1   41 g01_4x3_s41</span></span>
-<span><span class="co">#&gt; 2    4    3       1   42 g01_4x3_s42</span></span>
-<span><span class="co">#&gt; 3    5    4       2   41 g02_5x4_s41</span></span>
-<span><span class="co">#&gt; 4    5    4       2   42 g02_5x4_s42</span></span></code></pre></div>
+<span><span class="co">#&gt;   assessment: 109-119 rows</span></span></code></pre></div>
+<p>The ensemble is intentionally small so that the vignette builds
+quickly.</p>
 </div>
 <div class="section level2">
-<h2 id="fit-once-and-retain-separate-evidence-streams">Fit once and retain separate evidence streams<a class="anchor" aria-label="anchor" href="#fit-once-and-retain-separate-evidence-streams"></a>
+<h2 id="fit-and-inspect-the-workflow">Fit and inspect the workflow<a class="anchor" aria-label="anchor" href="#fit-and-inspect-the-workflow"></a>
 </h2>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">workflow</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_som_workflow.html">run_som_workflow</a></span><span class="op">(</span></span>
 <span>  <span class="va">morphology</span>,</span>
 <span>  <span class="va">spec</span>,</span>
 <span>  <span class="va">year_splits</span>,</span>
-<span>  preprocess <span class="op">=</span> <span class="fu"><a href="../reference/som_preprocess.html">som_preprocess</a></span><span class="op">(</span>center <span class="op">=</span> <span class="cn">TRUE</span>, scale <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  preprocess <span class="op">=</span> <span class="fu"><a href="../reference/som_preprocess.html">som_preprocess</a></span><span class="op">(</span></span>
+<span>    center <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    scale <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  cross_models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"kmeans"</span>, <span class="st">"ward"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">workflow</span></span>
-<span><span class="co">#&gt; &lt;som_workflow&gt;</span></span>
-<span><span class="co">#&gt;   SOM fits      : 12 attempted; 12 succeeded; 0 failed; 0 warnings </span></span>
-<span><span class="co">#&gt;   candidate k   : 2, 3, 4 </span></span>
-<span><span class="co">#&gt;   consensus     : 2 computed; 1 not_computed</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">workflow</span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;summary.som_workflow&gt;</span></span>
+<span><span class="co">#&gt;   SOM success: 12 / 12 </span></span>
+<span><span class="co">#&gt;   consensus  : 2 computed; 1 not_computed</span></span>
 <span><span class="co">#&gt;     - k=2: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%</span></span>
 <span><span class="co">#&gt;     - k=3: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%</span></span>
 <span><span class="co">#&gt;     - k=4: not_computed</span></span>
-<span><span class="co">#&gt;   cross-model   : 18 expected; 18 succeeded; 0 failed; 0 warnings ; 100.0% success</span></span>
+<span><span class="co">#&gt;   reference methods:</span></span>
 <span><span class="co">#&gt;     - kmeans: 9 expected, 9 succeeded, 0 failed, 0 warnings, 100.0% success</span></span>
 <span><span class="co">#&gt;     - ward: 9 expected, 9 succeeded, 0 failed, 0 warnings, 100.0% success</span></span></code></pre></div>
-<p>The representation audit, partition audit, consensus summaries,
-cross-model comparison, and transfer audit answer different questions.
-They should not be collapsed into a single rank.</p>
+<p>Read the evidence streams separately.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">workflow</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">grid_summary</span></span>
 <span><span class="co">#&gt;    grid xdim ydim n_fits median_quantization_error median_topographic_error</span></span>
@@ -281,62 +276,31 @@ They should not be collapsed into a single rank.</p>
 <span><span class="co">#&gt; 9           0.000000000</span></span>
 <span><span class="co">#&gt; 10          0.008403361</span></span>
 <span><span class="co">#&gt; 11          0.016806723</span></span>
-<span><span class="co">#&gt; 12          0.016806723</span></span>
-<span></span>
-<span><span class="va">successful_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Filter</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">fit</span><span class="op">$</span><span class="va">success</span><span class="op">)</span>, <span class="va">workflow</span><span class="op">$</span><span class="va">ensemble</span><span class="op">$</span><span class="va">fits</span><span class="op">)</span>,</span>
-<span>  <span class="va">`[[`</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="st">"id"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">representation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/audit_som_representation.html">audit_som_representation</a></span><span class="op">(</span></span>
-<span>  <span class="va">workflow</span><span class="op">$</span><span class="va">ensemble</span>,</span>
-<span>  pairs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    fit_a <span class="op">=</span> <span class="va">successful_ids</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>,</span>
-<span>    fit_b <span class="op">=</span> <span class="va">successful_ids</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  neighbourhood_size <span class="op">=</span> <span class="fl">10</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">representation</span><span class="op">$</span><span class="va">pairwise</span></span>
-<span><span class="co">#&gt;                                 fit_a                               fit_b</span></span>
-<span><span class="co">#&gt; 1 leave_domain_001_X2007__g01_4x3_s41 leave_domain_001_X2007__g01_4x3_s42</span></span>
-<span><span class="co">#&gt;                  split_a                split_b grid_a grid_b same_split</span></span>
-<span><span class="co">#&gt; 1 leave_domain_001_X2007 leave_domain_001_X2007      1      1       TRUE</span></span>
-<span><span class="co">#&gt;   same_grid    scope n_common_design n_common_mapped joint_mapping_coverage</span></span>
-<span><span class="co">#&gt; 1      TRUE analysis             233             233                      1</span></span>
-<span><span class="co">#&gt;   n_sample_pairs distance_rank_correlation correlation_status</span></span>
-<span><span class="co">#&gt; 1          27028                 0.7499548           computed</span></span>
-<span><span class="co">#&gt;   neighbourhood_size median_neighbourhood_jaccard neighbourhood_jaccard_q025</span></span>
-<span><span class="co">#&gt; 1                 10                    0.7037037                 0.02655945</span></span>
-<span><span class="co">#&gt;   neighbourhood_jaccard_q975 median_neighbourhood_size_a</span></span>
-<span><span class="co">#&gt; 1                          1                          21</span></span>
-<span><span class="co">#&gt;   median_neighbourhood_size_b neighbourhood_status</span></span>
-<span><span class="co">#&gt; 1                          21             computed</span></span></code></pre></div>
+<span><span class="co">#&gt; 12          0.016806723</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">workflow</span><span class="op">$</span><span class="va">audit</span><span class="op">)</span></span></code></pre></div>
-<p><img src="palmer-penguins_files/figure-html/evidence-plots-1.png" class="r-plt" alt="" width="90%"></p>
+<p><img src="v05-palmer-penguins_files/figure-html/evidence-plots-1.png" class="r-plt" alt="" width="90%"></p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">workflow</span><span class="op">$</span><span class="va">partitions</span><span class="op">)</span></span></code></pre></div>
-<p><img src="palmer-penguins_files/figure-html/evidence-plots-2.png" class="r-plt" alt="" width="90%"></p>
+<p><img src="v05-palmer-penguins_files/figure-html/evidence-plots-2.png" class="r-plt" alt="" width="90%"></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">transfer</span><span class="op">)</span></span></code></pre></div>
-<p><img src="palmer-penguins_files/figure-html/evidence-plots-3.png" class="r-plt" alt="" width="90%"></p>
-<p>Quantization and topographic errors concern the SOM representation.
-ARI and AMI between SOM and reference partitions concern agreement under
-a shared analysis design. Held-year distance and occupancy diagnostics
-concern transfer. None of these quantities is classification accuracy.
-The experimental topology comparison is likewise descriptive and applies
-only to the prespecified fit pair and jointly mapped observations shown
-above.</p>
+<p><img src="v05-palmer-penguins_files/figure-html/evidence-plots-3.png" class="r-plt" alt="" width="90%"></p>
+<p>The map audit concerns representation. The partition plot concerns
+repeated hard classifications. The transfer plot concerns the held-out
+year. None is a classification-accuracy plot.</p>
 </div>
 <div class="section level2">
-<h2 id="inspect-external-labels-only-after-consensus">Inspect external labels only after consensus<a class="anchor" aria-label="anchor" href="#inspect-external-labels-only-after-consensus"></a>
+<h2 id="compare-with-species-after-fitting">Compare with species after fitting<a class="anchor" aria-label="anchor" href="#compare-with-species-after-fitting"></a>
 </h2>
-<p>For illustration, inspect <code>k = 3</code> because the dataset
-contains three recorded species. This is a prespecified teaching choice,
-not evidence that <code>k = 3</code> is the optimal unsupervised
-partition.</p>
+<p>For this teaching example, inspect <code>k = 3</code> because the
+data contain three recorded species. This is a choice made before
+viewing the agreement results. It is not evidence that
+<code>k = 3</code> is the best unsupervised partition.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">consensus_k3</span> <span class="op">&lt;-</span> <span class="va">workflow</span><span class="op">$</span><span class="va">consensus</span><span class="op">$</span><span class="va">k3</span></span>
 <span><span class="va">external</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate_external_labels.html">evaluate_external_labels</a></span><span class="op">(</span><span class="va">consensus_k3</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">external</span></span>
 <span><span class="co">#&gt; &lt;som_external_assessment&gt; (post hoc)</span></span>
 <span><span class="co">#&gt;   samples used: 342 of 342 </span></span>
@@ -361,21 +325,19 @@ partition.</p>
 <span><span class="co">#&gt; 7                 1         Gentoo   0                0.00000000</span></span>
 <span><span class="co">#&gt; 8                 2         Gentoo 123                1.00000000</span></span>
 <span><span class="co">#&gt; 9                 3         Gentoo   0                0.00000000</span></span></code></pre></div>
-<p>The resulting ARI, AMI, and contingency table describe agreement
-between one consensus partition and the recorded species labels among
-evaluable samples. They do not establish that the partition is
-biologically correct, and they do not validate the package. The example
-instead demonstrates how labels can be kept outside training and
-introduced transparently at the interpretation stage.</p>
+<p>ARI, AMI and the contingency table describe agreement among the
+evaluable penguins. They do not prove that the partition is biologically
+correct. The main lesson is procedural: keep labels out of unsupervised
+training, then bring them back transparently for interpretation.</p>
 </div>
 <div class="section level2">
-<h2 id="reproducibility-record">Reproducibility record<a class="anchor" aria-label="anchor" href="#reproducibility-record"></a>
+<h2 id="save-the-record">Save the record<a class="anchor" aria-label="anchor" href="#save-the-record"></a>
 </h2>
-<p>Archive the package version, software environment, input provenance,
-and exact analysis choices with any reported result.</p>
+<p>Keep the exact data preparation, IDs, transfer design, SOM settings,
+warnings and failed fits with the result.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageVersion</a></span><span class="op">(</span><span class="st">"SOMevidence"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] '1.2.0'</span></span>
+<span><span class="co">#&gt; [1] '1.2.1'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageVersion</a></span><span class="op">(</span><span class="st">"palmerpenguins"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] '0.1.1'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -400,7 +362,7 @@ and exact analysis choices with any reported result.</p>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] SOMevidence_1.2.0</span></span>
+<span><span class="co">#&gt; [1] SOMevidence_1.2.1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;  [1] gtable_0.3.6         jsonlite_2.0.0       kohonen_3.0.13      </span></span>

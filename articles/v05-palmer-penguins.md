@@ -1,25 +1,20 @@
-# A real-data audit of Palmer penguin morphology
+# Worked example: Palmer penguin morphology
 
-## Purpose and inferential boundary
+## The question
 
-This tutorial uses an openly licensed, familiar dataset to show the
-complete workflow on real observations. It does not claim that penguin
-species are latent SOM classes or that morphology alone defines species.
-The four morphological variables are used for unsupervised training.
-Species is retained only as an external label and is inspected after the
-ensemble and consensus partition have been constructed.
+This example asks how reproducibly a SOM represents and partitions four
+penguin body measurements. Species is kept as an external label and is
+inspected only after fitting.
 
-The data are distributed by the
-[`palmerpenguins`](https://allisonhorst.github.io/palmerpenguins/)
-package under CC0. Measurements were collected for Adelie, Chinstrap,
-and Gentoo penguins in the Palmer Archipelago from 2007 to 2009. The
-original data publication and source citations are provided by the data
-package.
+The example does not assume that a SOM class is a species. Morphology
+overlaps among species and does not define taxonomy by itself.
 
-If the optional tutorial dependencies are unavailable, the code is
-displayed but not evaluated when the vignette is built.
+The `palmerpenguins` package distributes the data under CC0. Its
+documentation provides the original data source and citations. If the
+optional package is not installed, this vignette displays the code
+without running it.
 
-## Build a design-explicit data object
+## Prepare the data
 
 ``` r
 
@@ -27,10 +22,15 @@ library(SOMevidence)
 
 raw <- palmerpenguins::penguins
 variables <- c(
-  "bill_length_mm", "bill_depth_mm",
-  "flipper_length_mm", "body_mass_g"
+  "bill_length_mm",
+  "bill_depth_mm",
+  "flipper_length_mm",
+  "body_mass_g"
 )
-keep <- stats::complete.cases(raw[, c(variables, "species", "year")])
+
+keep <- stats::complete.cases(
+  raw[, c(variables, "species", "year")]
+)
 penguins <- raw[keep, , drop = FALSE]
 sample_ids <- sprintf("penguin_%03d", seq_len(nrow(penguins)))
 
@@ -39,7 +39,10 @@ morphology <- som_data(
   id = sample_ids,
   time = penguins$year,
   domain = factor(penguins$year),
-  external_label = stats::setNames(as.character(penguins$species), sample_ids)
+  external_label = stats::setNames(
+    as.character(penguins$species),
+    sample_ids
+  )
 )
 morphology
 #> <som_data>
@@ -50,18 +53,13 @@ morphology
 #>   design : time, domain, external_label
 ```
 
-Stable row identifiers make later joins auditable. Sampling year is
-declared as a transfer domain. Species is stored in metadata and never
-enters the SOM input matrix.
+Stable IDs link results back to observations. Year defines the transfer
+domain. Species remains outside the training matrix.
 
-## Prespecify the transfer design and ensemble budget
+## Leave out one year at a time
 
-Each split below leaves out one sampling year. The map and every
-preprocessing quantity are fitted using the other years; observations
-from the held-out year are assessment data. This demonstration uses a
-small budget so that the vignette remains quick to build. A substantive
-analysis should justify its grids, seeds, iterations, candidate `k`, and
-transfer domains before fitting.
+Each split trains on two sampling years and assesses the third.
+Preprocessing is estimated from the training years only.
 
 ``` r
 
@@ -85,15 +83,11 @@ year_splits
 #>   unique analysis sets: 3 
 #>   analysis  : 223-233 rows
 #>   assessment: 109-119 rows
-expand_som_spec(spec)
-#>   xdim ydim grid_id seed    model_id
-#> 1    4    3       1   41 g01_4x3_s41
-#> 2    4    3       1   42 g01_4x3_s42
-#> 3    5    4       2   41 g02_5x4_s41
-#> 4    5    4       2   42 g02_5x4_s42
 ```
 
-## Fit once and retain separate evidence streams
+The ensemble is intentionally small so that the vignette builds quickly.
+
+## Fit and inspect the workflow
 
 ``` r
 
@@ -101,25 +95,25 @@ workflow <- run_som_workflow(
   morphology,
   spec,
   year_splits,
-  preprocess = som_preprocess(center = TRUE, scale = TRUE),
+  preprocess = som_preprocess(
+    center = TRUE,
+    scale = TRUE
+  ),
   cross_models = c("kmeans", "ward")
 )
-workflow
-#> <som_workflow>
-#>   SOM fits      : 12 attempted; 12 succeeded; 0 failed; 0 warnings 
-#>   candidate k   : 2, 3, 4 
-#>   consensus     : 2 computed; 1 not_computed
+summary(workflow)
+#> <summary.som_workflow>
+#>   SOM success: 12 / 12 
+#>   consensus  : 2 computed; 1 not_computed
 #>     - k=2: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%
 #>     - k=3: computed; complete=yes; assignment=100.0%; labels=100.0%; replicated=100.0%
 #>     - k=4: not_computed
-#>   cross-model   : 18 expected; 18 succeeded; 0 failed; 0 warnings ; 100.0% success
+#>   reference methods:
 #>     - kmeans: 9 expected, 9 succeeded, 0 failed, 0 warnings, 100.0% success
 #>     - ward: 9 expected, 9 succeeded, 0 failed, 0 warnings, 100.0% success
 ```
 
-The representation audit, partition audit, consensus summaries,
-cross-model comparison, and transfer audit answer different questions.
-They should not be collapsed into a single rank.
+Read the evidence streams separately.
 
 ``` r
 
@@ -231,34 +225,6 @@ transfer$metrics
 #> 10          0.008403361
 #> 11          0.016806723
 #> 12          0.016806723
-
-successful_ids <- vapply(
-  Filter(function(fit) isTRUE(fit$success), workflow$ensemble$fits),
-  `[[`, character(1), "id"
-)
-representation <- audit_som_representation(
-  workflow$ensemble,
-  pairs = data.frame(
-    fit_a = successful_ids[[1]],
-    fit_b = successful_ids[[2]]
-  ),
-  neighbourhood_size = 10
-)
-representation$pairwise
-#>                                 fit_a                               fit_b
-#> 1 leave_domain_001_X2007__g01_4x3_s41 leave_domain_001_X2007__g01_4x3_s42
-#>                  split_a                split_b grid_a grid_b same_split
-#> 1 leave_domain_001_X2007 leave_domain_001_X2007      1      1       TRUE
-#>   same_grid    scope n_common_design n_common_mapped joint_mapping_coverage
-#> 1      TRUE analysis             233             233                      1
-#>   n_sample_pairs distance_rank_correlation correlation_status
-#> 1          27028                 0.7499548           computed
-#>   neighbourhood_size median_neighbourhood_jaccard neighbourhood_jaccard_q025
-#> 1                 10                    0.7037037                 0.02655945
-#>   neighbourhood_jaccard_q975 median_neighbourhood_size_a
-#> 1                          1                          21
-#>   median_neighbourhood_size_b neighbourhood_status
-#> 1                          21             computed
 ```
 
 ``` r
@@ -266,40 +232,38 @@ representation$pairwise
 plot(workflow$audit)
 ```
 
-![](palmer-penguins_files/figure-html/evidence-plots-1.png)
+![](v05-palmer-penguins_files/figure-html/evidence-plots-1.png)
 
 ``` r
 
 plot(workflow$partitions)
 ```
 
-![](palmer-penguins_files/figure-html/evidence-plots-2.png)
+![](v05-palmer-penguins_files/figure-html/evidence-plots-2.png)
 
 ``` r
 
 plot(transfer)
 ```
 
-![](palmer-penguins_files/figure-html/evidence-plots-3.png)
+![](v05-palmer-penguins_files/figure-html/evidence-plots-3.png)
 
-Quantization and topographic errors concern the SOM representation. ARI
-and AMI between SOM and reference partitions concern agreement under a
-shared analysis design. Held-year distance and occupancy diagnostics
-concern transfer. None of these quantities is classification accuracy.
-The experimental topology comparison is likewise descriptive and applies
-only to the prespecified fit pair and jointly mapped observations shown
-above.
+The map audit concerns representation. The partition plot concerns
+repeated hard classifications. The transfer plot concerns the held-out
+year. None is a classification-accuracy plot.
 
-## Inspect external labels only after consensus
+## Compare with species after fitting
 
-For illustration, inspect `k = 3` because the dataset contains three
-recorded species. This is a prespecified teaching choice, not evidence
-that `k = 3` is the optimal unsupervised partition.
+For this teaching example, inspect `k = 3` because the data contain
+three recorded species. This is a choice made before viewing the
+agreement results. It is not evidence that `k = 3` is the best
+unsupervised partition.
 
 ``` r
 
 consensus_k3 <- workflow$consensus$k3
 external <- evaluate_external_labels(consensus_k3)
+
 external
 #> <som_external_assessment> (post hoc)
 #>   samples used: 342 of 342 
@@ -326,22 +290,20 @@ external$composition
 #> 9                 3         Gentoo   0                0.00000000
 ```
 
-The resulting ARI, AMI, and contingency table describe agreement between
-one consensus partition and the recorded species labels among evaluable
-samples. They do not establish that the partition is biologically
-correct, and they do not validate the package. The example instead
-demonstrates how labels can be kept outside training and introduced
-transparently at the interpretation stage.
+ARI, AMI and the contingency table describe agreement among the
+evaluable penguins. They do not prove that the partition is biologically
+correct. The main lesson is procedural: keep labels out of unsupervised
+training, then bring them back transparently for interpretation.
 
-## Reproducibility record
+## Save the record
 
-Archive the package version, software environment, input provenance, and
-exact analysis choices with any reported result.
+Keep the exact data preparation, IDs, transfer design, SOM settings,
+warnings and failed fits with the result.
 
 ``` r
 
 packageVersion("SOMevidence")
-#> [1] '1.2.0'
+#> [1] '1.2.1'
 packageVersion("palmerpenguins")
 #> [1] '0.1.1'
 sessionInfo()
@@ -366,7 +328,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] SOMevidence_1.2.0
+#> [1] SOMevidence_1.2.1
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6         jsonlite_2.0.0       kohonen_3.0.13      

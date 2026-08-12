@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,9 +68,10 @@
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
 <dd><p>Optional unique sample identifiers. Supplying <code>id</code> explicitly is
 recommended for scientific analyses. If it is omitted, informative row
-names are used unless every row name follows the package-like
-<code>sample_&lt;integer&gt;</code> or <code>simulation_&lt;integer&gt;</code> pattern; such fully generic
-sequences are treated as generated rather than independently stable.</p></dd>
+names are used unless any row name follows the package-like
+<code>sample_&lt;integer&gt;</code> or <code>simulation_&lt;integer&gt;</code> pattern. Mixed provenance
+cannot be inferred safely, so such row-name vectors are treated as
+generated; pass <code>id</code> explicitly to confirm intentional identifiers.</p></dd>
 
 
 <dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
@@ -109,8 +110,13 @@ row order is treated as authoritative. The scalar <code>id_source</code> records
 whether sample identifiers were supplied, taken from explicit
 non-positional row names or generated locally. Stable identifiers are
 required to compare different data-coverage scenarios. A mixture of
-generic and study-specific row names is retained as explicit identity;
-one generic name does not cause the remaining row names to be discarded.</p>
+generic and study-specific row names is conservatively treated as
+generated unless the intended identifiers are supplied through <code>id</code>.
+This provenance label does not disable multi-layer row-name alignment:
+when every layer has row names, later layers are still matched to the
+first layer by those names. If such layer row names are not trustworthy,
+first place every layer in the same row order, remove its row names, and
+pass the confirmed identifiers through <code>id</code>.</p>
     </div>
 
     <div class="section level2">

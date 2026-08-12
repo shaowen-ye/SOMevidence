@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Respecting groups and monitoring domains in SOM validation • SOMevidence</title>
+<title>Choose the right resampling unit • SOMevidence</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Respecting groups and monitoring domains in SOM validation">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Choose the right resampling unit">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">SOMevidence</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,29 +51,33 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Respecting groups and monitoring domains in SOM validation</h1>
+      <h1>Choose the right resampling unit</h1>
                         <h4 data-toc-skip class="author">Shaowen Ye</h4>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/vignettes/design-aware-resampling.Rmd" class="external-link"><code>vignettes/design-aware-resampling.Rmd</code></a></small>
-      <div class="d-none name"><code>design-aware-resampling.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/shaowen-ye/SOMevidence/blob/main/vignettes/v03-design-aware-resampling.Rmd" class="external-link"><code>vignettes/v03-design-aware-resampling.Rmd</code></a></small>
+      <div class="d-none name"><code>v03-design-aware-resampling.Rmd</code></div>
     </div>
 
     
     
 <div class="section level2">
-<h2 id="why-the-resampling-unit-matters">Why the resampling unit matters<a class="anchor" aria-label="anchor" href="#why-the-resampling-unit-matters"></a>
+<h2 id="why-rows-are-not-always-independent">Why rows are not always independent<a class="anchor" aria-label="anchor" href="#why-rows-are-not-always-independent"></a>
 </h2>
-<p>Environmental and ecological tables often contain repeated
-observations from the same site, individual, transect, campaign or
-watershed. Treating those rows as independent can place closely related
-observations in both the analysis and assessment subsets. A model may
-then appear reproducible because it repeatedly sees the same sampling
-unit, not because the pattern transfers to a new unit.</p>
-<p><code>SOMevidence</code> stores the sampling hierarchy outside the
-predictor matrix and requires the resampling design to be stated. The
-example below creates a known three-class system with strong site-level
-dependence. Class labels remain external to training.</p>
+<p>Monitoring tables often contain several records from the same site,
+individual, transect or campaign. If we split those rows independently,
+closely related records can appear in both the analysis and assessment
+sets. The partition may then look more reproducible than it is for a new
+sampling unit.</p>
+<p>The solution is simple: resample the unit that was independently
+sampled.</p>
+</div>
+<div class="section level2">
+<h2 id="compare-row-and-site-resampling">Compare row and site resampling<a class="anchor" aria-label="anchor" href="#compare-row-and-site-resampling"></a>
+</h2>
+<p>The example below creates repeated observations within 20 simulated
+sites. Generated class labels are stored as metadata and are not used
+for training.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shaowen-ye.github.io/SOMevidence/">SOMevidence</a></span><span class="op">)</span></span>
 <span></span>
@@ -92,15 +96,23 @@ dependence. Class labels remain external to training.</p>
 <span><span class="co">#&gt;   id source: generated </span></span>
 <span><span class="co">#&gt;     - environment: 6 variables, 0.0% missing</span></span>
 <span><span class="co">#&gt;   design : group, external_label</span></span></code></pre></div>
-<p>Row resampling and site resampling answer different questions. The
-latter asks whether a partition can be reproduced after entire sites are
-withheld.</p>
+<p>We now create two designs. The first samples rows. The second samples
+whole sites.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">row_splits</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/som_resamples.html">som_resamples</a></span><span class="op">(</span></span>
-<span>  <span class="va">grouped</span>, method <span class="op">=</span> <span class="st">"subsample"</span>, repeats <span class="op">=</span> <span class="fl">3</span>, prop <span class="op">=</span> <span class="fl">0.8</span>, seed <span class="op">=</span> <span class="fl">102</span></span>
+<span>  <span class="va">grouped</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"subsample"</span>,</span>
+<span>  repeats <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  prop <span class="op">=</span> <span class="fl">0.8</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">102</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">site_splits</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/som_resamples.html">som_resamples</a></span><span class="op">(</span></span>
-<span>  <span class="va">grouped</span>, method <span class="op">=</span> <span class="st">"group_subsample"</span>, repeats <span class="op">=</span> <span class="fl">3</span>, prop <span class="op">=</span> <span class="fl">0.8</span>, seed <span class="op">=</span> <span class="fl">102</span></span>
+<span>  <span class="va">grouped</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"group_subsample"</span>,</span>
+<span>  repeats <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  prop <span class="op">=</span> <span class="fl">0.8</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">102</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/som_spec.html">som_spec</a></span><span class="op">(</span></span>
@@ -109,15 +121,19 @@ withheld.</p>
 <span>  rlen <span class="op">=</span> <span class="fl">40</span>,</span>
 <span>  k <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">4</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Both workflows use the same SOM budget and preprocessing. Only the
-resampling unit changes.</p>
+<p>Only the resampling unit changes.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">row_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_som_workflow.html">run_som_workflow</a></span><span class="op">(</span></span>
-<span>  <span class="va">grouped</span>, <span class="va">spec</span>, <span class="va">row_splits</span>,</span>
+<span>  <span class="va">grouped</span>,</span>
+<span>  <span class="va">spec</span>,</span>
+<span>  <span class="va">row_splits</span>,</span>
 <span>  cross_models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"kmeans"</span>, <span class="st">"ward"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">site_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_som_workflow.html">run_som_workflow</a></span><span class="op">(</span></span>
-<span>  <span class="va">grouped</span>, <span class="va">spec</span>, <span class="va">site_splits</span>,</span>
+<span>  <span class="va">grouped</span>,</span>
+<span>  <span class="va">spec</span>,</span>
+<span>  <span class="va">site_splits</span>,</span>
 <span>  cross_models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"kmeans"</span>, <span class="st">"ward"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -147,17 +163,16 @@ resampling unit changes.</p>
 <span><span class="co">#&gt; 1 0.9330339  0.5757283 0.03367107 0.8662455</span></span>
 <span><span class="co">#&gt; 2 0.7344795  0.4014499 0.18533753 0.6936857</span></span>
 <span><span class="co">#&gt; 3 0.7106070  0.4090858 0.27542202 0.6681121</span></span></code></pre></div>
-<p>These outputs should be compared as design sensitivities, not as an
-algorithm ranking. A difference shows that the inferential unit matters.
-It does not by itself identify which design matches a particular field
-study; that decision comes from how the observations were collected.</p>
+<p>Treat this as a design sensitivity, not a competition between
+algorithms. If the results differ, the sampling hierarchy matters. The
+field design tells you which result answers the scientific question.</p>
 </div>
 <div class="section level2">
-<h2 id="mapping-to-a-held-out-monitoring-domain">Mapping to a held-out monitoring domain<a class="anchor" aria-label="anchor" href="#mapping-to-a-held-out-monitoring-domain"></a>
+<h2 id="leave-out-a-monitoring-domain">Leave out a monitoring domain<a class="anchor" aria-label="anchor" href="#leave-out-a-monitoring-domain"></a>
 </h2>
-<p>Leave-domain-out analysis addresses another question: does a map
-trained in some domains receive observations from a held-out domain at
-comparable distances and on units occupied during training?</p>
+<p>Sometimes the question is not about new sites within the same survey.
+We may want to know how a map behaves in a different season, region,
+campaign or instrument domain.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">shifted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_som_scenario.html">simulate_som_scenario</a></span><span class="op">(</span></span>
 <span>  <span class="st">"gradient"</span>,</span>
@@ -167,44 +182,78 @@ comparable distances and on units occupied during training?</p>
 <span>  domain_shift <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">110</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">domain_splits</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/som_resamples.html">som_resamples</a></span><span class="op">(</span></span>
 <span>  <span class="va">shifted</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"leave_domain_out"</span>,</span>
 <span>  domain <span class="op">=</span> <span class="st">"domain"</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">domain_ensemble</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_som_ensemble.html">fit_som_ensemble</a></span><span class="op">(</span></span>
 <span>  <span class="va">shifted</span>,</span>
-<span>  <span class="fu"><a href="../reference/som_spec.html">som_spec</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">3</span><span class="op">)</span>, seeds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">111</span>, <span class="fl">112</span><span class="op">)</span>, rlen <span class="op">=</span> <span class="fl">40</span>, k <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">4</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/som_spec.html">som_spec</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>    seeds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">111</span>, <span class="fl">112</span><span class="op">)</span>,</span>
+<span>    rlen <span class="op">=</span> <span class="fl">40</span>,</span>
+<span>    k <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">4</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  <span class="va">domain_splits</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">transfer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/audit_transfer.html">audit_transfer</a></span><span class="op">(</span><span class="va">domain_ensemble</span><span class="op">)</span></span>
-<span><span class="va">transfer</span></span>
-<span><span class="co">#&gt; &lt;som_transfer_audit&gt;</span></span>
-<span><span class="co">#&gt;   successful transfers: 6 </span></span>
-<span><span class="co">#&gt;   median distance ratio: 15.144 </span></span>
-<span><span class="co">#&gt;   median held-out coverage: 1.000 </span></span>
-<span><span class="co">#&gt;   median new-unit rate : 0.000</span></span></code></pre></div>
+<span><span class="va">transfer</span><span class="op">$</span><span class="va">metrics</span></span>
+<span><span class="co">#&gt;                                         id                   split_id grid_id</span></span>
+<span><span class="co">#&gt; 1 leave_domain_001_domain_01__g01_4x3_s111 leave_domain_001_domain_01       1</span></span>
+<span><span class="co">#&gt; 2 leave_domain_001_domain_01__g01_4x3_s112 leave_domain_001_domain_01       1</span></span>
+<span><span class="co">#&gt; 3 leave_domain_002_domain_02__g01_4x3_s111 leave_domain_002_domain_02       1</span></span>
+<span><span class="co">#&gt; 4 leave_domain_002_domain_02__g01_4x3_s112 leave_domain_002_domain_02       1</span></span>
+<span><span class="co">#&gt; 5 leave_domain_003_domain_03__g01_4x3_s111 leave_domain_003_domain_03       1</span></span>
+<span><span class="co">#&gt; 6 leave_domain_003_domain_03__g01_4x3_s112 leave_domain_003_domain_03       1</span></span>
+<span><span class="co">#&gt;   seed n_analysis n_assessment n_analysis_mapped n_assessment_mapped</span></span>
+<span><span class="co">#&gt; 1  111         80           40                80                  40</span></span>
+<span><span class="co">#&gt; 2  112         80           40                80                  40</span></span>
+<span><span class="co">#&gt; 3  111         80           40                80                  40</span></span>
+<span><span class="co">#&gt; 4  112         80           40                80                  40</span></span>
+<span><span class="co">#&gt; 5  111         80           40                80                  40</span></span>
+<span><span class="co">#&gt; 6  112         80           40                80                  40</span></span>
+<span><span class="co">#&gt;   analysis_mapping_coverage assessment_mapping_coverage</span></span>
+<span><span class="co">#&gt; 1                         1                           1</span></span>
+<span><span class="co">#&gt; 2                         1                           1</span></span>
+<span><span class="co">#&gt; 3                         1                           1</span></span>
+<span><span class="co">#&gt; 4                         1                           1</span></span>
+<span><span class="co">#&gt; 5                         1                           1</span></span>
+<span><span class="co">#&gt; 6                         1                           1</span></span>
+<span><span class="co">#&gt;   median_analysis_distance median_assessment_distance distance_ratio</span></span>
+<span><span class="co">#&gt; 1                0.5418000                  9.2082891      16.995735</span></span>
+<span><span class="co">#&gt; 2                0.5106895                  9.2082891      18.031090</span></span>
+<span><span class="co">#&gt; 3                0.1773180                  0.4040655       2.278761</span></span>
+<span><span class="co">#&gt; 4                0.1516422                  0.3734101       2.462442</span></span>
+<span><span class="co">#&gt; 5                0.4320523                  6.0703721      14.050085</span></span>
+<span><span class="co">#&gt; 6                0.4115560                  6.6826979      16.237638</span></span>
+<span><span class="co">#&gt;   unoccupied_unit_rate</span></span>
+<span><span class="co">#&gt; 1                0.000</span></span>
+<span><span class="co">#&gt; 2                0.000</span></span>
+<span><span class="co">#&gt; 3                0.875</span></span>
+<span><span class="co">#&gt; 4                0.850</span></span>
+<span><span class="co">#&gt; 5                0.000</span></span>
+<span><span class="co">#&gt; 6                0.000</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">transfer</span><span class="op">)</span></span></code></pre></div>
-<p><img src="design-aware-resampling_files/figure-html/transfer-plot-1.png" class="r-plt" alt="" width="576"></p>
-<p>The distance ratio and unoccupied-unit rate diagnose domain shift.
-They are not accuracy statistics, because an unsupervised map has no
-response label to predict. They also do not establish a causal
-explanation for the shift. In this teaching generator, the domains
-occupy successive ranges of the latent gradient and
-<code>domain_shift</code> adds a domain-specific offset. The example
-therefore combines range extrapolation with an additive shift; it is not
-an isolated test of either mechanism.</p>
+<p><img src="v03-design-aware-resampling_files/figure-html/transfer-plot-1.png" class="r-plt" alt="" width="576"></p>
+<p>The distance and occupancy measures show whether the held-out domain
+maps like the training data. They are not accuracy measures. This
+simulation mixes range extrapolation with an added domain shift, so it
+also cannot identify a causal mechanism.</p>
 </div>
 <div class="section level2">
-<h2 id="map-a-later-monitoring-batch-without-refitting">Map a later monitoring batch without refitting<a class="anchor" aria-label="anchor" href="#map-a-later-monitoring-batch-without-refitting"></a>
+<h2 id="map-a-later-batch-without-refitting">Map a later batch without refitting<a class="anchor" aria-label="anchor" href="#map-a-later-batch-without-refitting"></a>
 </h2>
-<p>An operational monitoring workflow may freeze a trained ensemble and
-map a later batch. The new data must have the same named layers and
-variables, but it may contain one or many observations. Each map applies
-its own training-derived preprocessing.</p>
+<p>An operational workflow may freeze an ensemble and map a later batch.
+The new data need the same named layers and variables. Each map reuses
+the preprocessing learned from its own training data.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">training_rows</span> <span class="op">&lt;-</span> <span class="va">shifted</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">domain</span> <span class="op">!=</span> <span class="st">"domain_03"</span></span>
+<span></span>
 <span><span class="va">training</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/som_data.html">som_data</a></span><span class="op">(</span></span>
 <span>  layers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
 <span>    <span class="va">shifted</span><span class="op">$</span><span class="va">layers</span>,</span>
@@ -212,6 +261,7 @@ its own training-derived preprocessing.</p>
 <span>  <span class="op">)</span>,</span>
 <span>  id <span class="op">=</span> <span class="va">shifted</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">id</span><span class="op">[</span><span class="va">training_rows</span><span class="op">]</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">new_batch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/som_data.html">som_data</a></span><span class="op">(</span></span>
 <span>  layers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
 <span>    <span class="va">shifted</span><span class="op">$</span><span class="va">layers</span>,</span>
@@ -220,20 +270,19 @@ its own training-derived preprocessing.</p>
 <span>  id <span class="op">=</span> <span class="va">shifted</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">id</span><span class="op">[</span><span class="op">!</span><span class="va">training_rows</span><span class="op">]</span>,</span>
 <span>  domain <span class="op">=</span> <span class="va">shifted</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">domain</span><span class="op">[</span><span class="op">!</span><span class="va">training_rows</span><span class="op">]</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">frozen_ensemble</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_som_ensemble.html">fit_som_ensemble</a></span><span class="op">(</span></span>
 <span>  <span class="va">training</span>,</span>
-<span>  <span class="fu"><a href="../reference/som_spec.html">som_spec</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">3</span><span class="op">)</span>, seeds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">120</span>, <span class="fl">121</span><span class="op">)</span>, rlen <span class="op">=</span> <span class="fl">40</span>, k <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">4</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/som_spec.html">som_spec</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>    seeds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">120</span>, <span class="fl">121</span><span class="op">)</span>,</span>
+<span>    rlen <span class="op">=</span> <span class="fl">40</span>,</span>
+<span>    k <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">4</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  keep_models <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">new_mapping</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/map_som_ensemble.html">map_som_ensemble</a></span><span class="op">(</span><span class="va">frozen_ensemble</span>, <span class="va">new_batch</span><span class="op">)</span></span>
-<span><span class="va">new_mapping</span></span>
-<span><span class="co">#&gt; &lt;som_newdata_mapping&gt;</span></span>
-<span><span class="co">#&gt;   new samples    : 40 </span></span>
-<span><span class="co">#&gt;   fits attempted : 2 </span></span>
-<span><span class="co">#&gt;   fits mapped    : 2 </span></span>
-<span><span class="co">#&gt;   fits failed    : 0 </span></span>
-<span><span class="co">#&gt;   warnings       : 0 </span></span>
-<span><span class="co">#&gt;   node consensus : not computed across grids</span></span>
 <span><span class="va">new_mapping</span><span class="op">$</span><span class="va">summary</span></span>
 <span><span class="co">#&gt;               fit_id grid_id xdim ydim n_new n_mapped mapping_coverage</span></span>
 <span><span class="co">#&gt; 1 full__g01_4x3_s120       1    4    3    40       40                1</span></span>
@@ -246,19 +295,20 @@ its own training-derived preprocessing.</p>
 <span><span class="co">#&gt; 2                    0</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">new_mapping</span><span class="op">)</span></span></code></pre></div>
-<p><img src="design-aware-resampling_files/figure-html/new-batch-plot-1.png" class="r-plt" alt="" width="576"></p>
-<p>Best-matching unit identifiers stay specific to each map. The package
-does not align nodes across different grids or turn distance shift into
-a hard class prediction.</p>
+<p><img src="v03-design-aware-resampling_files/figure-html/new-batch-plot-1.png" class="r-plt" alt="" width="576"></p>
+<p>Best-matching unit numbers belong to a specific fitted map. Do not
+compare a node number across different grids as if it were the same
+class.</p>
 </div>
 <div class="section level2">
-<h2 id="predefined-temporal-or-spatial-blocks">Predefined temporal or spatial blocks<a class="anchor" aria-label="anchor" href="#predefined-temporal-or-spatial-blocks"></a>
+<h2 id="define-time-or-space-blocks-yourself">Define time or space blocks yourself<a class="anchor" aria-label="anchor" href="#define-time-or-space-blocks-yourself"></a>
 </h2>
-<p><code>block_subsample</code> expects <code>unit</code> to identify
-blocks already defined from the study design. The package does not guess
-a block length from row order. This keeps the scientific definition of a
-season, campaign, reach or time window under analyst control and
-prevents accidental dependence on file ordering.</p>
+<p>Use <code>block_subsample</code> when the study design already
+defines seasons, campaigns, reaches or time windows. Pass those blocks
+through <code>unit</code>. The package does not guess a block length
+from row order.</p>
+<p>The practical rule is: identify the independent sampling unit first,
+then choose the resampling method.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

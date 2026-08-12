@@ -1,0 +1,183 @@
+# Using the guided Shiny app
+
+## Start the app
+
+The Shiny app is a practical way to learn the workflow and prepare an
+analysis. It uses the same package functions as the R interface.
+
+``` r
+
+library(SOMevidence)
+shiny::runApp(launch_som_app())
+```
+
+The app helps you choose settings, checks the design before fitting and
+explains each result view. For a publication analysis, export the R
+script and continue in R. The R interface is better suited to large
+ensembles, multiple data layers and custom sensitivity analyses.
+
+Use **Language / 语言** to switch between English and Chinese. The
+current data, parameters and computed results stay in place. The
+exported R script remains in English so that it is portable across R
+sessions and publications.
+
+Move the pointer over a dotted-underlined control label to see a
+one-sentence explanation. Important result-table terms, including ARI
+and AMI, also have short hover notes. Drag the vertical divider to
+change the width of the left and right panels. Arrow keys make small
+adjustments when the divider has keyboard focus, and a double-click
+restores the default width.
+
+`SOMevidence` sends no telemetry. Files selected in a locally running
+app stay on your computer. A remotely deployed app sends selected files
+to its server.
+
+## Learn with the four examples
+
+Choose a **Guided example** in the left panel. The app will load the
+data and apply a short set of recommended settings.
+
+| Example | Question | Resampling |
+|----|----|----|
+| Discrete classes | Can a clear partition be recovered repeatedly? | Rows |
+| Continuous gradient | Is the map useful even when hard classes are weak? | Rows |
+| Grouped monitoring | What happens when records are nested within sites? | Whole groups |
+| Domain transfer | Does the map cover a monitoring domain left out of training? | Leave one domain out |
+
+Use **Reset recommended settings** to undo changes. Use **Download
+example CSV** if you want to inspect the table outside the app.
+
+The columns `indicator_01` to `indicator_06` are generic simulated
+measurements. They do not stand for fixed environmental variables. When
+you upload a CSV, the app keeps your original variable names.
+
+These are teaching examples. They are not performance benchmarks and
+their settings are not general recommendations for field studies.
+
+### What each example teaches
+
+**Discrete classes** contains three generated groups. The group label is
+kept out of training. This lets you see how map quality, partition
+stability, sample support and cross-model agreement fit together.
+
+**Continuous gradient** has no generated class boundary. It shows that a
+SOM can represent continuous structure well without supporting a strong
+hard classification.
+
+**Grouped monitoring** contains repeated records from simulated sites.
+The app resamples whole sites. This avoids treating related observations
+as new independent information.
+
+**Domain transfer** leaves out one simulated monitoring domain at a
+time. Its outputs describe mapping distance and coverage, not prediction
+accuracy or the cause of the domain difference.
+
+## Upload your own CSV
+
+Choose **Upload CSV**, then use **Download CSV template** as a starting
+point. The names can change, but keep the roles clear.
+
+| Role | Template column | Used to train the SOM? |
+|----|----|---:|
+| Sample identifier | `sample_id` | No |
+| Sampling group | `sampling_group` | No |
+| Sampling time | `survey_date` | No |
+| Transfer domain | `reporting_region` | No |
+| Measured variables | columns beginning with `measure_` | Yes |
+| External label | `external_label` | No |
+
+The app does not select uploaded predictors for you. Check every numeric
+column. IDs, coordinates, dates, weights and known labels should not
+enter the training matrix simply because they are numeric.
+
+The selected predictors must be complete. The app does not hide
+imputation or choose a missing-distance rule. If missing values are part
+of the study, plan that analysis directly in R.
+
+## Work down the left panel
+
+### 1. Data and study design
+
+Select the measured variables. Then identify the columns that describe
+sample identity, grouping, time and transfer domains. These columns stay
+outside the SOM feature space.
+
+### 2. Preprocessing
+
+Choose a transformation from the way the variables are measured and
+distributed. Do not try several transformations and retain only the one
+that gives the most attractive classes. Centering and scaling are
+estimated within each analysis split.
+
+### 3. Resampling design
+
+Match the resampling unit to data collection:
+
+- use `subsample` for independent rows;
+- use `group_subsample` for sites, individuals or transects;
+- use `leave_domain_out` for campaigns, regions or instruments; and
+- use `full` only when you want repeated starts without data
+  perturbation.
+
+### 4. SOM ensemble
+
+State the grid, random seeds, training iterations and candidate `k`
+values. The app checks whether each split contains enough observations
+for the planned map and partitions.
+
+### 5. Triangulation and export
+
+K-means and Ward.D2 are the default reference methods. GMM is optional.
+They are fitted on the same eligible splits. Their role is to check
+whether similar partition geometry appears under another algorithm, not
+to create a ranking.
+
+Press **Run workflow** only after the preflight panel is ready.
+
+## Read the results
+
+| View | Ask | Do not conclude |
+|----|----|----|
+| Representation | Does the map represent the observations? | That discrete classes exist |
+| Partition stability | Does the partition recur? | That stable groups are ecological truth |
+| Consensus | Which sample assignments are well supported? | That a label is certainly correct |
+| Cross-model agreement | Does similar geometry appear elsewhere? | Accuracy or a winning model |
+
+The help box above each plot gives three short prompts: the question,
+what to inspect and the interpretive limit.
+
+Check the **Run diagnostics** table before interpreting a figure. Report
+failed fits and warnings. For partition results, read ARI or AMI with
+joint sample coverage. For consensus, inspect both membership support
+and assignment entropy.
+
+## If preflight stops the run
+
+- **Select predictors:** choose measured variables and exclude design
+  columns.
+- **Predictors must be complete:** plan a justified missing-data
+  analysis in R.
+- **No planned SOM fit is eligible:** reduce the grid or revise the
+  split.
+- **Repeated analysis sets:** reduce repeats or change the resampling
+  design.
+- **No cross-model split is eligible:** review sample size and candidate
+  `k`.
+
+These messages prevent a run that cannot answer the stated question.
+They are not software failures.
+
+## Export a reproducible record
+
+After a successful run, download the R script and the YAML snapshot. The
+R script is executable. The YAML file is a readable record of the
+controls, but the current app cannot import it.
+
+For an uploaded dataset, place the CSV in the `data` directory expected
+by the script. Run the script in a clean R session. Save the input
+provenance, package version, warnings, failures and results with the
+final analysis.
+
+Move to the R interface when you need multiple layers, missing-data
+sensitivity, time blocks, a larger computing budget, study-specific
+decision rules or automated reporting.
